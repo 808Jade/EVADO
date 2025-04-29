@@ -647,7 +647,7 @@ CIlluminatedObjectsShader::~CIlluminatedObjectsShader()
 {
 }
 
-// Directional Light ÀÇ Åõ¿µ ¿µ¿ª ¼³Á¤À» À§ÇØ ¹Ù¿îµù ¹Ú½º°¡ ÇÊ¿äÇÔ.
+// Directional Light 의 투영 영역 설정을 위해 바운딩 박스가 필요함.
 BoundingBox CIlluminatedObjectsShader::CalculateBoundingBox()
 {
 	if (m_pObjects.empty()) return BoundingBox();
