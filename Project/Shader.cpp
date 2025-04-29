@@ -769,8 +769,8 @@ CDepthRenderShader::CDepthRenderShader(CIlluminatedObjectsShader* pObjectsShader
 	m_pLights = pLights;
 	m_pToLightSpaces = new TOLIGHTSPACEINFO;
 
-	// ºûÀÇ ½ÃÁ¡À¸·Î ·»´õ¸µÇÑ ÁÂÇ¥¸¦ **ÅØ½ºÃ³ ÁÂÇ¥ (0~1)**·Î º¯È¯
-	// OpenGL/DirectXÀÇ **NDC ÁÂÇ¥(-1 ~ 1)**¸¦ **ÅØ½ºÃ³ ÁÂÇ¥(0 ~ 1)**·Î º¯È¯
+	// 빛의 시점으로 렌더링한 좌표를 **텍스처 좌표 (0~1)**로 변환
+	// OpenGL/DirectX의 **NDC 좌표(-1 ~ 1)**를 **텍스처 좌표(0 ~ 1)**로 변환
 	XMFLOAT4X4 xmf4x4ToTexture = { 0.5f, 0.0f, 0.0f, 0.0f, 0.0f, -0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 0.5f, 0.0f, 1.0f };
 	m_xmProjectionToTexture = XMLoadFloat4x4(&xmf4x4ToTexture);
 }
@@ -828,10 +828,10 @@ D3D12_RASTERIZER_DESC CDepthRenderShader::CreateRasterizerState()
 	return(d3dRasterizerDesc);
 }
 
-// RTV¼­¼úÀÚÈü, DSV¼­¼úÀÚÈü, SRV¼­¼úÀÚÈü, ±íÀÌÅØ½ºÃ³¸®¼Ò½º, ±íÀÌ-½ºÅÙ½Ç ¸®¼Ò½º »ý¼º ¹× ¿¬°á
+// RTV서술자힙, DSV서술자힙, SRV서술자힙, 깊이텍스처리소스, 깊이-스텐실 리소스 생성 및 연결
 void CDepthRenderShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext)
 {
-	// RTV Èü »ý¼º
+	// RTV 힙 생성
 	D3D12_DESCRIPTOR_HEAP_DESC d3dDescriptorHeapDesc;
 	::ZeroMemory(&d3dDescriptorHeapDesc, sizeof(D3D12_DESCRIPTOR_HEAP_DESC));
 	d3dDescriptorHeapDesc.NumDescriptors = MAX_DEPTH_TEXTURES;
@@ -840,24 +840,24 @@ void CDepthRenderShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 	d3dDescriptorHeapDesc.NodeMask = 0;
 	HRESULT hResult = pd3dDevice->CreateDescriptorHeap(&d3dDescriptorHeapDesc, IID_PPV_ARGS(&m_pd3dRtvDescriptorHeap));
 
-	// ±íÀÌ ÅØ½ºÃ³ ¸®¼Ò½º »ý¼º
+	// 깊이 텍스처 리소스 생성
 	m_pDepthFromLightTexture = new CTexture(MAX_DEPTH_TEXTURES, RESOURCE_TEXTURE2D_ARRAY, 0, 1);
 	D3D12_CLEAR_VALUE d3dClearValue = { DXGI_FORMAT_R32_FLOAT, { 1.0f, 1.0f, 1.0f, 1.0f } };
 	for (UINT i = 0; i < MAX_DEPTH_TEXTURES; i++)
 		m_pDepthFromLightTexture->CreateTexture(pd3dDevice,
-												pd3dCommandList,
-												i, 
-												RESOURCE_TEXTURE2D,
-												_DEPTH_BUFFER_WIDTH,
-												_DEPTH_BUFFER_HEIGHT,
-												1,
-												0,
-												DXGI_FORMAT_R32_FLOAT,
-												D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET,
-												D3D12_RESOURCE_STATE_COMMON,
-												&d3dClearValue );
+			pd3dCommandList,
+			i,
+			RESOURCE_TEXTURE2D,
+			_DEPTH_BUFFER_WIDTH,
+			_DEPTH_BUFFER_HEIGHT,
+			1,
+			0,
+			DXGI_FORMAT_R32_FLOAT,
+			D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET,
+			D3D12_RESOURCE_STATE_COMMON,
+			&d3dClearValue);
 
-	// RTV »ý¼º
+	// RTV 생성
 	D3D12_RENDER_TARGET_VIEW_DESC d3dRenderTargetViewDesc;
 	d3dRenderTargetViewDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
 	d3dRenderTargetViewDesc.Texture2D.MipSlice = 0;
@@ -872,7 +872,7 @@ void CDepthRenderShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 		d3dRtvCPUDescriptorHandle.ptr += ::gnRtvDescriptorIncrementSize;
 	}
 
-	// DSV Èü »ý¼º (±íÀÌ Å×½ºÆ®¿ë)
+	// DSV 힙 생성 (깊이 테스트용)
 //	::ZeroMemory(&d3dDescriptorHeapDesc, sizeof(D3D12_DESCRIPTOR_HEAP_DESC));
 	d3dDescriptorHeapDesc.NumDescriptors = 1;
 	d3dDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
@@ -880,7 +880,7 @@ void CDepthRenderShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 	//	d3dDescriptorHeapDesc.NodeMask = 0;
 	hResult = pd3dDevice->CreateDescriptorHeap(&d3dDescriptorHeapDesc, IID_PPV_ARGS(&m_pd3dDsvDescriptorHeap));
 
-	// ±íÀÌ-½ºÅÙ½Ç ¸®¼Ò½º¸¦ À§ÇÑ ¼­¼úÀÚ ¼Ó¼º Á¤ÀÇ
+	// 깊이-스텐실 리소스를 위한 서술자 속성 정의
 	D3D12_RESOURCE_DESC d3dResourceDesc;
 	d3dResourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
 	d3dResourceDesc.Alignment = 0;
@@ -894,7 +894,7 @@ void CDepthRenderShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 	d3dResourceDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
 	d3dResourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
 
-	// ±íÀÌ-½ºÅÙ½Ç ¸®¼Ò½º¸¦ À§ÇÑ Èü ¼Ó¼º Á¤ÀÇ
+	// 깊이-스텐실 리소스를 위한 힙 속성 정의
 	D3D12_HEAP_PROPERTIES d3dHeapProperties;
 	::ZeroMemory(&d3dHeapProperties, sizeof(D3D12_HEAP_PROPERTIES));
 	d3dHeapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;
@@ -907,16 +907,16 @@ void CDepthRenderShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 	d3dClearValue.DepthStencil.Depth = 1.0f;
 	d3dClearValue.DepthStencil.Stencil = 0;
 
-	// ±íÀÌ-½ºÅÙ½Ç ¸®¼Ò½º »ý¼º
+	// 깊이-스텐실 리소스 생성
 	pd3dDevice->CreateCommittedResource(&d3dHeapProperties,
-										D3D12_HEAP_FLAG_NONE,
-										&d3dResourceDesc,
-										D3D12_RESOURCE_STATE_DEPTH_WRITE,
-										&d3dClearValue,
-										__uuidof(ID3D12Resource),
-										(void**)&m_pd3dDepthBuffer );
+		D3D12_HEAP_FLAG_NONE,
+		&d3dResourceDesc,
+		D3D12_RESOURCE_STATE_DEPTH_WRITE,
+		&d3dClearValue,
+		__uuidof(ID3D12Resource),
+		(void**)&m_pd3dDepthBuffer);
 
-	// DSV »ý¼º
+	// DSV 생성
 	D3D12_DEPTH_STENCIL_VIEW_DESC d3dDepthStencilViewDesc;
 	::ZeroMemory(&d3dDepthStencilViewDesc, sizeof(D3D12_DEPTH_STENCIL_VIEW_DESC));
 	d3dDepthStencilViewDesc.Format = DXGI_FORMAT_D32_FLOAT;
@@ -925,7 +925,7 @@ void CDepthRenderShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 	m_d3dDsvDescriptorCPUHandle = m_pd3dDsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 	pd3dDevice->CreateDepthStencilView(m_pd3dDepthBuffer, &d3dDepthStencilViewDesc, m_d3dDsvDescriptorCPUHandle);
 
-	// Ä«¸Þ¶ó ÃÊ±âÈ­
+	// 카메라 초기화
 	for (int i = 0; i < MAX_DEPTH_TEXTURES; ++i)
 	{
 		m_ppDepthRenderCameras[i] = new CCamera();
@@ -934,7 +934,7 @@ void CDepthRenderShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 		m_ppDepthRenderCameras[i]->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 	}
 
-	// CBVSRVUAVÈü »ý¼º
+	// CBVSRVUAV힙 생성
 	//D3D12_DESCRIPTOR_HEAP_DESC d3dDescriptorHeapDesc;
 	d3dDescriptorHeapDesc.NumDescriptors = MAX_DEPTH_TEXTURES;
 	d3dDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
@@ -943,11 +943,11 @@ void CDepthRenderShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 
 	pd3dDevice->CreateDescriptorHeap(&d3dDescriptorHeapDesc, IID_PPV_ARGS(&m_pd3dCbvSrvUavDescriptorHeap));
 
-	// ½ÃÀÛ ÇÚµé ÀúÀå
+	// 시작 핸들 저장
 	m_d3dSrvCPUDescriptorHandle = m_pd3dCbvSrvUavDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 	m_d3dSrvGPUDescriptorHandle = m_pd3dCbvSrvUavDescriptorHeap->GetGPUDescriptorHandleForHeapStart();
 
-	// SRV »ý¼ºÇØ¼­ CBVSRVUAVÈü¿¡ µî·Ï
+	// SRV 생성해서 CBVSRVUAV힙에 등록
 	for (UINT i = 0; i < MAX_DEPTH_TEXTURES; ++i)
 	{
 		ID3D12Resource* pResource = m_pDepthFromLightTexture->GetResource(i);
@@ -964,19 +964,20 @@ void CDepthRenderShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 		pd3dDevice->CreateShaderResourceView(pResource, &d3dShaderResourceViewDesc, d3dCbvSrvCPUDescriptorHandle);
 	}
 
-	// ·»´õ¸µ Àü¿¡ Èü ¹ÙÀÎµù
+	// 렌더링 전에 힙 바인딩
 	//pd3dCommandList->SetDescriptorHeaps(1, &m_pd3dCbvSrvUavDescriptorHeap);
-	//pd3dCommandList->SetGraphicsRootDescriptorTable(½½·Ô¹øÈ£, m_d3dSrvGPUDescriptorHandle);
+	//pd3dCommandList->SetGraphicsRootDescriptorTable(슬롯번호, m_d3dSrvGPUDescriptorHandle);
 
 
-	// ½¦ÀÌ´õ¿¡¼­ Shadow Map Texture¸¦ SRV·Î Á¢±ÙÇÒ ¼ö ÀÖµµ·Ï ÁØºñ
+	// 쉐이더에서 Shadow Map Texture를 SRV로 접근할 수 있도록 준비
 	//CScene::CreateCbvSrvDescriptorHeaps(pd3dDevice, 0, m_pDepthFromLightTexture->GetTextures());
 
-	//½ÇÁ¦ ÅØ½ºÃ³ ¸®¼Ò½ºµé¿¡ ´ëÇØ SRV¸¦ »ý¼ºÇØ¼­ µð½ºÅ©¸³ÅÍ Èü¿¡ µî·Ï
+	//실제 텍스처 리소스들에 대해 SRV를 생성해서 디스크립터 힙에 등록
 	CScene::CreateShaderResourceViews(pd3dDevice, m_pDepthFromLightTexture, 0, 15);
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 }
+
 
 void CDepthRenderShader::ReleaseObjects()
 {
@@ -1000,7 +1001,7 @@ void CDepthRenderShader::CreateShaderVariables(ID3D12Device* pd3dDevice, ID3D12G
 {
 	UINT ncbDepthElementBytes;
 
-	ncbDepthElementBytes = ((sizeof(TOLIGHTSPACEINFO) + 255) & ~255); //256ÀÇ ¹è¼ö
+	ncbDepthElementBytes = ((sizeof(TOLIGHTSPACEINFO) + 255) & ~255); //256의 배수
 	m_pd3dcbToLightSpaces = ::CreateBufferResource(pd3dDevice, pd3dCommandList, NULL, ncbDepthElementBytes, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, NULL);
 
 	m_pd3dcbToLightSpaces->Map(0, NULL, (void**)&m_pcbMappedToLightSpaces);
@@ -1371,6 +1372,7 @@ XMMATRIX CreateOrthographicProjectionMatrix(XMMATRIX& xmmtxLightView, CCamera* p
 	return(xmmtxProjection);
 }
 
+
 void CDepthRenderShader::PrepareShadowMap(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
 	BoundingBox xmBoundingBox = m_pObjectsShader->CalculateBoundingBox();
@@ -1407,26 +1409,26 @@ void CDepthRenderShader::PrepareShadowMap(ID3D12GraphicsCommandList* pd3dCommand
 			XMStoreFloat4x4(&m_ppDepthRenderCameras[j]->m_xmf4x4View, xmmtxLightView);
 			XMStoreFloat4x4(&m_ppDepthRenderCameras[j]->m_xmf4x4Projection, xmmtxProjection);
 
-			// ±×¸²ÀÚ ¸Ê ÅØ½ºÃ³ ÁÂÇ¥·Î º¯È¯ÇÒ Çà·Ä ÀúÀå
+			// 그림자 맵 텍스처 좌표로 변환할 행렬 저장
 			XMMATRIX xmmtxToTexture = XMMatrixTranspose(xmmtxLightView * xmmtxProjection * m_xmProjectionToTexture);
 			XMStoreFloat4x4(&m_pToLightSpaces->m_pxmf4x4ToTextures[j], xmmtxToTexture);
 			m_pToLightSpaces->m_pxmf4LightPositions[j] = XMFLOAT4(xmf3Position.x, xmf3Position.y, xmf3Position.z, 1.0f);
 
-			// ±×¸²ÀÚ ¸Ê ÅØ½ºÃ³¸¦ GPU°¡ ¾²±â À§ÇÑ »óÅÂ·Î ÀüÈ¯
+			// 그림자 맵 텍스처를 GPU가 쓰기 위한 상태로 전환
 			::SynchronizeResourceTransition(pd3dCommandList, m_pDepthFromLightTexture->GetResource(j), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
-			// ÀÌÀü ÇÁ·¹ÀÓÀÇ ÀÜÀç Á¦°Å
+			// 이전 프레임의 잔재 제거
 			float pfClearColor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 			pd3dCommandList->ClearRenderTargetView(m_pd3dRtvCPUDescriptorHandles[j], pfClearColor, 0, NULL);
 			pd3dCommandList->ClearDepthStencilView(m_d3dDsvDescriptorCPUHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, NULL);
 
-			// ÇØ´ç ½¦µµ¿ì¸Ê ÅØ½ºÃ³¸¦ ·»´õ Å¸°ÙÀ¸·Î ¼³Á¤
+			// 해당 쉐도우맵 텍스처를 렌더 타겟으로 설정
 			pd3dCommandList->OMSetRenderTargets(1, &m_pd3dRtvCPUDescriptorHandles[j], TRUE, &m_d3dDsvDescriptorCPUHandle);
 
-			// ¿ÀºêÁ§Æ®µéÀ» ·»´õ¸µÇØ¼­ ±×¸²ÀÚ ¸ÊÀ» »ý¼º (±íÀÌ°ª¸¸ ±â·ÏµÊ) fuckpoint
+			// 오브젝트들을 렌더링해서 그림자 맵을 생성 (깊이값만 기록됨) fuckpoint
 			CDepthRenderShader::Render(pd3dCommandList, m_ppDepthRenderCameras[j]);
 
-			// ±×¸²ÀÚ ¸Ê ÅØ½ºÃ³¸¦ ´Ù½Ã ÀÐ±â °¡´ÉÇÑ »óÅÂ·Î ÀüÈ¯ (Pixel Shader µî¿¡¼­ »ç¿ëÇÒ ¼ö ÀÖ°Ô)
+			// 그림자 맵 텍스처를 다시 읽기 가능한 상태로 전환 (Pixel Shader 등에서 사용할 수 있게)
 			::SynchronizeResourceTransition(pd3dCommandList, m_pDepthFromLightTexture->GetResource(j), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_COMMON);
 		}
 		else
@@ -1435,6 +1437,8 @@ void CDepthRenderShader::PrepareShadowMap(ID3D12GraphicsCommandList* pd3dCommand
 		}
 	}
 }
+
+
 
 void CDepthRenderShader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
