@@ -235,7 +235,11 @@ void CPlayer::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamer
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// 
+
+
+
+
+
 #define _WITH_DEBUG_CALLBACK_DATA
 
 //void CSoundCallbackHandler::HandleCallback(void *pCallbackData, float fTrackPosition)
