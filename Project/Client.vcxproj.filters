@@ -15,6 +15,7 @@
     </Filter>
     <Filter Include="Shaders">
       <UniqueIdentifier>{2d2ebd03-0df5-4cd4-af71-d8b24fed3a12}</UniqueIdentifier>
+	</Filter>
     <Filter Include="Network">
       <UniqueIdentifier>{615a8c3d-ea84-4f46-813a-75b31cc0c5ba}</UniqueIdentifier>
     </Filter>
