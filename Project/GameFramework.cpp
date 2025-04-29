@@ -571,8 +571,10 @@ void CGameFramework::FrameAdvance()
 	HRESULT hResult = m_pd3dCommandAllocator->Reset();
 	hResult = m_pd3dCommandList->Reset(m_pd3dCommandAllocator, NULL);
 
+	// for Shadow mapping
 	m_pScene->OnPrepareRender(m_pd3dCommandList);
 	m_pScene->OnPreRender(m_pd3dCommandList, m_pCamera);
+	// for Shadow mapping
 
 	D3D12_RESOURCE_BARRIER d3dResourceBarrier;
 	::ZeroMemory(&d3dResourceBarrier, sizeof(D3D12_RESOURCE_BARRIER));
