@@ -316,8 +316,8 @@ void CGameFramework::OnProcessingKeyboardMessage(HWND hWnd, UINT nMessageID, WPA
 					::PostQuitMessage(0);
 					break;
 				case VK_RETURN:
-					m_ppScenes[m_nScene]->ReleaseObjects();
-					m_nCurrentScene = m_nScene + 1;
+					m_ppScenes[0]->ReleaseObjects();
+					m_CurrentSceneIndex = 1;
 					BuildObjects();
 					break;
 				case VK_F1:
@@ -421,14 +421,14 @@ void CGameFramework::BuildObjects()
 	m_nScenes = 2; // 총 Scene 개수
 	m_ppScenes = new CScene * [m_nScenes];
 
-	if (m_nCurrentScene == 0) {
+	if (m_CurrentSceneIndex == 0) {
 		m_ppScenes[0] = new CStartScene();
 		m_ppScenes[0]->BuildObjects(m_pd3dDevice, m_pd3dCommandList);
 
-		CTerrainPlayer* pPlayer = new CTerrainPlayer(m_pd3dDevice, m_pd3dCommandList, m_ppScenes[0]->GetGraphicsRootSignature(),NULL);
+		CTerrainPlayer* pPlayer = new CTerrainPlayer(m_pd3dDevice, m_pd3dCommandList, m_ppScenes[0]->GetGraphicsRootSignature(), NULL);
 		m_ppScenes[0]->SetPlayer(pPlayer);
 	}
-	else if (m_nCurrentScene == 1) {
+	else if (m_CurrentSceneIndex == 1) {
 		m_ppScenes[1] = new CScene();
 		m_ppScenes[1]->BuildObjects(m_pd3dDevice, m_pd3dCommandList);
 
@@ -443,12 +443,11 @@ void CGameFramework::BuildObjects()
 //	pPlayer->SetPosition(XMFLOAT3(425.0f, 240.0f, 640.0f));
 //#endif
 
-	m_nScene = m_nCurrentScene; // 현재 활성화 Scene 인덱스
-	m_pScene = m_ppScenes[m_nScene];
+	m_pScene = m_ppScenes[m_CurrentSceneIndex]; // Scene Index 에 따라 Current Scene 변경
 	m_pScene->m_pPlayer = m_pPlayer = m_pScene->GetPlayer();
 	m_pCamera = m_pPlayer->GetCamera();
 
-	if (m_nCurrentScene == 1)
+	if (m_CurrentSceneIndex == 1)
 	{ 
 		m_pScene->m_ppHierarchicalGameObjects[0]->SetPlayer(m_pPlayer);
 
@@ -529,7 +528,7 @@ void CGameFramework::AnimateObjects()
 		//pRightHand->SetChild(m_pScene->m_ppHierarchicalGameObjects[2], true);
 	}
 
-	if (m_nCurrentScene == 0) m_pPlayer->SetPosition(XMFLOAT3(0, 0, 0));
+	if (m_CurrentSceneIndex == 0) m_pPlayer->SetPosition(XMFLOAT3(0, 0, 0));
 }
 
 void CGameFramework::WaitForGpuComplete()
@@ -572,8 +571,10 @@ void CGameFramework::FrameAdvance()
 	hResult = m_pd3dCommandList->Reset(m_pd3dCommandAllocator, NULL);
 
 	// for Shadow mapping
-	m_pScene->OnPrepareRender(m_pd3dCommandList);
-	m_pScene->OnPreRender(m_pd3dCommandList, m_pCamera);
+	if (1 == m_CurrentSceneIndex) {
+		m_pScene->OnPrepareRender(m_pd3dCommandList);
+		m_pScene->OnPreRender(m_pd3dCommandList, m_pCamera);
+	}
 	// for Shadow mapping
 
 	D3D12_RESOURCE_BARRIER d3dResourceBarrier;
