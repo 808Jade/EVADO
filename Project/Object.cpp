@@ -89,6 +89,7 @@ void CTexture::UpdateShaderVariables(ID3D12GraphicsCommandList* pd3dCommandList)
 		for (int i = 0; i < m_nRootParameters; i++)
 		{
 			std::cout << "[RootParam " << i << "] index: " << m_pnRootParameterIndices[i] << ", handle.ptr: " << m_pd3dSrvGpuDescriptorHandles[i].ptr << std::endl;
+
 			pd3dCommandList->SetGraphicsRootDescriptorTable(m_pnRootParameterIndices[i], m_pd3dSrvGpuDescriptorHandles[i]);
 		}
 	}
@@ -848,7 +849,7 @@ void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pC
 	if (m_pMesh)
 	{
 		UpdateShaderVariable(pd3dCommandList, &m_xmf4x4World);
-
+		
 		if (m_nMaterials > 0)
 		{
 			for (int i = 0; i < m_nMaterials; i++)
@@ -1474,7 +1475,6 @@ void CGameObject::CalculateBoundingBox()
 {
 	if (m_pChild)
 	{
-		cout << "calculateBB : " << m_pChild->GetFrameName();
 		if (m_pChild->m_pMesh)
 		{
 			m_xmBoundingBox = m_pChild->m_pMesh->GetBoundingBox();

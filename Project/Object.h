@@ -37,9 +37,9 @@ private:
 	UINT							m_nTextureType;
 
 	int								m_nTextures = 0;
-	_TCHAR(*m_ppstrTextureNames)[64] = NULL;
-	ID3D12Resource** m_ppd3dTextures = NULL;
-	ID3D12Resource** m_ppd3dTextureUploadBuffers;
+	_TCHAR							(*m_ppstrTextureNames)[64] = NULL;
+	ID3D12Resource**				m_ppd3dTextures = NULL;
+	ID3D12Resource**				m_ppd3dTextureUploadBuffers;
 
 	UINT*							m_pnResourceTypes = NULL;
 

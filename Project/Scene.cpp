@@ -96,39 +96,16 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 	if (pSpiderModel) delete pSpiderModel;
 
-	CLoadedModelInfo* pFlashlightModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Item/Flashlightgold.bin", NULL);
-	m_ppHierarchicalGameObjects[1] = new FlashLight(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pFlashlightModel);
-	m_ppHierarchicalGameObjects[1]->SetScale(10, 10, 10);
-	m_ppHierarchicalGameObjects[1]->SetPosition(3, 2, 10);
-	if (pFlashlightModel) delete pFlashlightModel;
-
-	CLoadedModelInfo* pShovelModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Item/Shovel.bin", NULL);
-	m_ppHierarchicalGameObjects[2] = new Shovel(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pShovelModel);
-	m_ppHierarchicalGameObjects[2]->SetScale(1, 1, 1);
-	m_ppHierarchicalGameObjects[2]->Rotate(-90, 0, 0);
-	m_ppHierarchicalGameObjects[2]->SetPosition(3, 2, 12);
-	if (pShovelModel) delete pShovelModel;
-
-	CLoadedModelInfo* pWhistleModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Item/Whistle.bin", NULL);
-	m_ppHierarchicalGameObjects[3] = new Whistle(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pWhistleModel);
-	m_ppHierarchicalGameObjects[3]->SetScale(10, 10, 10);
-	m_ppHierarchicalGameObjects[3]->SetPosition(3, 2, 13);
-	if (pWhistleModel) delete pWhistleModel;
-
-/////*
-//	m_nShaders = 1;
-//	m_ppShaders = new CShader*[m_nShaders];
-//
-//	CEthanObjectsShader *pEthanObjectsShader = new CEthanObjectsShader();
-//	pEthanObjectsShader->BuildObjects(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pEthanModel, m_pTerrain);
-//
-//	m_ppShaders[0] = pEthanObjectsShader;
-////*/
-//	if (pEthanModel) delete pEthanModel
+	//CLoadedModelInfo* pFlashlightModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Item/Flashlightgold.bin", NULL);
+	//m_ppHierarchicalGameObjects[1] = new FlashLight(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pFlashlightModel);
+	//m_ppHierarchicalGameObjects[1]->SetScale(10, 10, 10);
+	//m_ppHierarchicalGameObjects[1]->SetPosition(3, 2, 10);
+	//if (pFlashlightModel) delete pFlashlightModel;
 
 	//CLoadedModelInfo* pShovelModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Item/Shovel.bin", NULL);
 	//m_ppHierarchicalGameObjects[2] = new Shovel(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pShovelModel);
-	//m_ppHierarchicalGameObjects[2]->SetScale(10, 10, 10);
+	//m_ppHierarchicalGameObjects[2]->SetScale(1, 1, 1);
+	//m_ppHierarchicalGameObjects[2]->Rotate(-90, 0, 0);
 	//m_ppHierarchicalGameObjects[2]->SetPosition(3, 2, 12);
 	//if (pShovelModel) delete pShovelModel;
 
@@ -137,8 +114,6 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	//m_ppHierarchicalGameObjects[3]->SetScale(10, 10, 10);
 	//m_ppHierarchicalGameObjects[3]->SetPosition(3, 2, 13);
 	//if (pWhistleModel) delete pWhistleModel;
-
-
 
 	m_nShaders = 1;
 	m_ppShaders = new CShader * [m_nShaders];
@@ -276,8 +251,8 @@ ID3D12RootSignature *CScene::CreateGraphicsRootSignature(ID3D12Device *pd3dDevic
 	pd3dDescriptorRanges[10].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
   
     pd3dDescriptorRanges[11].RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-	pd3dDescriptorRanges[11].NumDescriptors = 1;
-	pd3dDescriptorRanges[11].BaseShaderRegister = 5; //t5: gtxtShadowDepthTexture (for Depth Buffer)
+	pd3dDescriptorRanges[11].NumDescriptors = MAX_DEPTH_TEXTURES;
+	pd3dDescriptorRanges[11].BaseShaderRegister = 20; //t20 ~ 20+MAX_DEPTH_TEXTURES : gtxtShadowDepthTexture (for Depth Buffer)
 	pd3dDescriptorRanges[11].RegisterSpace = 0;
 	pd3dDescriptorRanges[11].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
@@ -295,7 +270,7 @@ ID3D12RootSignature *CScene::CreateGraphicsRootSignature(ID3D12Device *pd3dDevic
 	pd3dRootParameters[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
 	pd3dRootParameters[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-	pd3dRootParameters[2].Descriptor.ShaderRegister = 4; //Lightsc b4 (Light.hlsl)
+	pd3dRootParameters[2].Descriptor.ShaderRegister = 4; //Lights b4 (Light.hlsl)
 	pd3dRootParameters[2].Descriptor.RegisterSpace = 0;
 	pd3dRootParameters[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
@@ -461,7 +436,8 @@ void CScene::CreateShaderVariables(ID3D12Device *pd3dDevice, ID3D12GraphicsComma
 
 void CScene::UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList)
 {
-	::memcpy(m_pcbMappedLights, m_pLights, sizeof(LIGHTS));
+	if(m_pLights)
+		::memcpy(m_pcbMappedLights, m_pLights, sizeof(LIGHTS));
 	::memcpy(&m_pcbMappedLights->m_xmf4GlobalAmbient, &m_xmf4GlobalAmbient, sizeof(XMFLOAT4));
 	::memcpy(&m_pcbMappedLights->m_nLights, &m_nLights, sizeof(int));
 }
@@ -591,7 +567,7 @@ void CScene::OnPrepareRender(ID3D12GraphicsCommandList* pd3dCommandList)
 	if (m_pd3dcbLights)
 	{
 		D3D12_GPU_VIRTUAL_ADDRESS d3dcbLightsGpuVirtualAddress = m_pd3dcbLights->GetGPUVirtualAddress();
-		pd3dCommandList->SetGraphicsRootConstantBufferView(4, d3dcbLightsGpuVirtualAddress);
+		pd3dCommandList->SetGraphicsRootConstantBufferView(2, d3dcbLightsGpuVirtualAddress);
 	}
 }
 
@@ -602,6 +578,13 @@ void CScene::OnPostRender(ID3D12GraphicsCommandList* pd3dCommandList)
 
 void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
+	// 6. 루트 시그니처 / 디스크립터 힙 재설정: ShadowShader나 DebugShader가 바꿨을 수 있음
+	if (m_pd3dGraphicsRootSignature)
+		pd3dCommandList->SetGraphicsRootSignature(m_pd3dGraphicsRootSignature);
+
+	if (m_pd3dCbvSrvDescriptorHeap)
+		pd3dCommandList->SetDescriptorHeaps(1, &m_pd3dCbvSrvDescriptorHeap); // 반드시 CBV 설정 전에
+
 	// 1. 빛에서의 변환 행렬 전달 (쉐도우맵 연산에 필요)
 	if (m_pDepthRenderShader)
 		m_pDepthRenderShader->UpdateShaderVariables(pd3dCommandList);
