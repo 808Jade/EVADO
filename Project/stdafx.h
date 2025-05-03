@@ -48,6 +48,7 @@ using namespace std;
 #include <DirectXPackedVector.h>
 #include <DirectXColors.h>
 #include <DirectXCollision.h>
+#include <comdef.h>
 
 #include <Mmsystem.h>
 

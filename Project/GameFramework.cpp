@@ -44,11 +44,44 @@ bool CGameFramework::OnCreate(HINSTANCE hInstance, HWND hMainWnd)
 	m_hWnd = hMainWnd;
 
 	CreateDirect3DDevice();
+
+#if defined (_DEBUG)
+	ID3D12InfoQueue* pInfoQueue = nullptr;
+	if (SUCCEEDED(m_pd3dDevice->QueryInterface(IID_PPV_ARGS(&pInfoQueue)))) {
+		// 에러 발생 시 디버깅 중단
+		pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE);
+		pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE);
+
+		// 필요하면 경고도 보기
+		// pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, TRUE);
+
+		// 로그 확인 (선택)
+		UINT numMessages = pInfoQueue->GetNumStoredMessagesAllowedByRetrievalFilter();
+		for (UINT i = 0; i < numMessages; ++i)
+		{
+			SIZE_T messageLength = 0;
+			pInfoQueue->GetMessage(i, nullptr, &messageLength); // 길이만 확인
+
+			D3D12_MESSAGE* pMessage = (D3D12_MESSAGE*)malloc(messageLength);
+			if (pMessage)
+			{
+				pInfoQueue->GetMessage(i, pMessage, &messageLength);
+				OutputDebugStringA(pMessage->pDescription);
+				OutputDebugStringA("\n");
+				free(pMessage);
+			}
+		}
+
+		pInfoQueue->Release();
+	}
+#endif
+
 	CreateCommandQueueAndList();
 	CreateRtvAndDsvDescriptorHeaps();
 
 	CreateSwapChain();
 	CreateDepthStencilView();
+
 
 	CoInitialize(NULL);
 

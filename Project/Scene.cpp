@@ -256,7 +256,7 @@ ID3D12RootSignature *CScene::CreateGraphicsRootSignature(ID3D12Device *pd3dDevic
 	pd3dDescriptorRanges[11].RegisterSpace = 0;
 	pd3dDescriptorRanges[11].OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-	D3D12_ROOT_PARAMETER pd3dRootParameters[17];
+	D3D12_ROOT_PARAMETER pd3dRootParameters[18];
 
 	pd3dRootParameters[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
 	pd3dRootParameters[0].Descriptor.ShaderRegister = 1; //Camera b1
@@ -343,6 +343,11 @@ ID3D12RootSignature *CScene::CreateGraphicsRootSignature(ID3D12Device *pd3dDevic
 	pd3dRootParameters[16].DescriptorTable.NumDescriptorRanges = 1;
 	pd3dRootParameters[16].DescriptorTable.pDescriptorRanges = &(pd3dDescriptorRanges[11]);
 	pd3dRootParameters[16].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+
+	pd3dRootParameters[17].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+	pd3dRootParameters[17].Descriptor.ShaderRegister = 6; //ToLight
+	pd3dRootParameters[17].Descriptor.RegisterSpace = 0;
+	pd3dRootParameters[17].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
 	D3D12_STATIC_SAMPLER_DESC pd3dSamplerDescs[4];
 
@@ -578,13 +583,6 @@ void CScene::OnPostRender(ID3D12GraphicsCommandList* pd3dCommandList)
 
 void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-	// 6. 루트 시그니처 / 디스크립터 힙 재설정: ShadowShader나 DebugShader가 바꿨을 수 있음
-	if (m_pd3dGraphicsRootSignature)
-		pd3dCommandList->SetGraphicsRootSignature(m_pd3dGraphicsRootSignature);
-
-	if (m_pd3dCbvSrvDescriptorHeap)
-		pd3dCommandList->SetDescriptorHeaps(1, &m_pd3dCbvSrvDescriptorHeap); // 반드시 CBV 설정 전에
-
 	// 1. 빛에서의 변환 행렬 전달 (쉐도우맵 연산에 필요)
 	if (m_pDepthRenderShader)
 		m_pDepthRenderShader->UpdateShaderVariables(pd3dCommandList);
@@ -593,7 +591,7 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	pCamera->SetViewportsAndScissorRects(pd3dCommandList);
 	pCamera->UpdateShaderVariables(pd3dCommandList);
 
-	// 3. 그림자 적용 패스 (쉐도우맵에서 객체 깊이값 계산)
+	// 3. 그림자 적용 패스 : 그림자를 적용할 객체들을 렌더링 (쉐도우맵에서 객체 깊이값 계산)
 	if (m_pShadowShader)
 		m_pShadowShader->Render(pd3dCommandList, pCamera);
 

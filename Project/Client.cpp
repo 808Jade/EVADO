@@ -110,6 +110,15 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
 	if (!hMainWnd) return(FALSE);
 
+#if defined(_DEBUG)
+	ID3D12Debug* pDebugController = nullptr;
+	if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&pDebugController)))) {
+		pDebugController->EnableDebugLayer();
+		pDebugController->Release();
+	}
+
+#endif
+
 	gGameFramework.OnCreate(hInstance, hMainWnd);
 
 	::ShowWindow(hMainWnd, nCmdShow);

@@ -292,6 +292,41 @@ float4 PSSkyBox(VS_SKYBOX_CUBEMAP_OUTPUT input) : SV_TARGET
 	return(cColor);
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+struct VS_LIGHTING_INPUT
+{
+    float3 position : POSITION;
+    float3 normal : NORMAL;
+};
+
+struct VS_LIGHTING_OUTPUT
+{
+    float4 position : SV_POSITION;
+    float3 positionW : POSITION;
+    float3 normalW : NORMAL;
+};
+
+VS_LIGHTING_OUTPUT VSLighting(VS_LIGHTING_INPUT input)
+{
+    VS_LIGHTING_OUTPUT output;
+
+    output.normalW = mul(input.normal, (float3x3) gmtxGameObject);
+    output.positionW = (float3) mul(float4(input.position, 1.0f), gmtxGameObject);
+    output.position = mul(mul(float4(output.positionW, 1.0f), gmtxView), gmtxProjection);
+
+    return (output);
+}
+
+float4 PSLighting(VS_LIGHTING_OUTPUT input) : SV_TARGET
+{
+    input.normalW = normalize(input.normalW);
+    float4 shadowMapUVs[MAX_LIGHTS];
+    float4 cIllumination = Lighting(input.positionW, input.normalW, false, shadowMapUVs);
+
+//	return(cIllumination);
+    return (float4(input.normalW * 0.5f + 0.5f, 1.0f));
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -301,7 +336,7 @@ struct PS_DEPTH_OUTPUT
     float fDepth : SV_Depth;
 };
 
-PS_DEPTH_OUTPUT PSDepthWriteShader(VS_STANDARD_OUTPUT input)
+PS_DEPTH_OUTPUT PSDepthWriteShader(VS_LIGHTING_OUTPUT input)
 {
     PS_DEPTH_OUTPUT output;
 
@@ -322,7 +357,7 @@ struct VS_SHADOW_MAP_OUTPUT
     float4 shadowMapUVs[MAX_LIGHTS] : TEXCOORD0;
 };
 
-VS_SHADOW_MAP_OUTPUT VSShadowMapShadow(VS_STANDARD_INPUT input)
+VS_SHADOW_MAP_OUTPUT VSShadowMapShadow(VS_LIGHTING_INPUT input)
 {
     VS_SHADOW_MAP_OUTPUT output = (VS_SHADOW_MAP_OUTPUT) 0;
 
