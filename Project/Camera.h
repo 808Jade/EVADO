@@ -41,10 +41,15 @@ protected:
 	ID3D12Resource					*m_pd3dcbCamera = NULL;
 	VS_CB_CAMERA_INFO				*m_pcbMappedCamera = NULL;
 
-// for Shadow Mapping ( Access at Shader.cpp - PrepareShadowMap() )
 public:
 	XMFLOAT4X4						m_xmf4x4View;
 	XMFLOAT4X4						m_xmf4x4Projection;
+
+	enum class RenderMode { Standard, DepthMap };
+	RenderMode m_renderMode = RenderMode::Standard;
+
+	void SetRenderMode(RenderMode mode) { m_renderMode = mode; }
+	RenderMode GetRenderMode() const { return m_renderMode; }
 
 public:
 	CCamera();

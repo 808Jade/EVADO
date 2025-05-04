@@ -265,7 +265,6 @@ void CMaterial::UpdateShaderVariable(ID3D12GraphicsCommandList *pd3dCommandList)
 	pd3dCommandList->SetGraphicsRoot32BitConstants(1, 4, &m_xmf4AlbedoColor, 20);
 	pd3dCommandList->SetGraphicsRoot32BitConstants(1, 4, &m_xmf4SpecularColor, 24);
 	pd3dCommandList->SetGraphicsRoot32BitConstants(1, 4, &m_xmf4EmissiveColor, 28);
-
 	pd3dCommandList->SetGraphicsRoot32BitConstants(1, 1, &m_nType, 32);
 
 	for (int i = 0; i < m_nTextures; i++)
@@ -843,7 +842,10 @@ void CGameObject::Animate(float fTimeElapsed)
 
 void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
 {
-	if (m_pSkinnedAnimationController) m_pSkinnedAnimationController->UpdateShaderVariables(pd3dCommandList);
+	if (m_pSkinnedAnimationController) 
+	{
+		m_pSkinnedAnimationController->UpdateShaderVariables(pd3dCommandList);
+	}
 
 	if (m_pMesh)
 	{
@@ -855,8 +857,15 @@ void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pC
 			{
 				if (m_ppMaterials[i])
 				{
-					if (m_ppMaterials[i]->m_pShader) m_ppMaterials[i]->m_pShader->Render(pd3dCommandList, pCamera);
-					m_ppMaterials[i]->UpdateShaderVariable(pd3dCommandList);
+					// DepthMap 모드가 아닌 경우에만 머티리얼 및 셰이더 업데이트
+					if (pCamera->GetRenderMode() != CCamera::RenderMode::DepthMap)
+					{
+						if (m_ppMaterials[i]->m_pShader)
+						{
+							m_ppMaterials[i]->m_pShader->Render(pd3dCommandList, pCamera);
+						}
+						m_ppMaterials[i]->UpdateShaderVariable(pd3dCommandList);
+					}
 				}
 
 				m_pMesh->Render(pd3dCommandList, i);

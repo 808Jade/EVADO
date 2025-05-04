@@ -260,6 +260,8 @@ void CShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGr
 void CShader::OnPrepareRender(ID3D12GraphicsCommandList *pd3dCommandList, int nPipelineState)
 {
 	if (m_pd3dPipelineState) pd3dCommandList->SetPipelineState(m_pd3dPipelineState);
+	if (m_pd3dCbvSrvUavDescriptorHeap) pd3dCommandList->SetDescriptorHeaps(1, &m_pd3dCbvSrvUavDescriptorHeap);
+	std::cout << "[DEBUG] Current Descriptor Heap: " << m_pd3dCbvSrvUavDescriptorHeap << std::endl;
 }
 
 void CShader::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
@@ -778,7 +780,7 @@ void CIlluminatedObjectsShader::OnPostRender(ID3D12GraphicsCommandList* pd3dComm
 
 CDepthRenderShader::CDepthRenderShader(CIlluminatedObjectsShader* pObjectsShader, LIGHT* pLights)
 {
-	m_pObjectsShader = pObjectsShader;
+	m_pIlluminatedObjectsShader = pObjectsShader;
 
 	m_pLights = pLights;
 	m_pToLightSpaces = new TOLIGHTSPACEINFO;
@@ -1402,7 +1404,7 @@ XMMATRIX CreateOrthographicProjectionMatrix(XMMATRIX& xmmtxLightView, CCamera* p
 
 void CDepthRenderShader::PrepareShadowMap(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-	BoundingBox xmBoundingBox = m_pObjectsShader->CalculateBoundingBox();
+	BoundingBox xmBoundingBox = m_pIlluminatedObjectsShader->CalculateBoundingBox();
 
 	for (int j = 0; j < MAX_LIGHTS; j++)
 	{
@@ -1453,7 +1455,7 @@ void CDepthRenderShader::PrepareShadowMap(ID3D12GraphicsCommandList* pd3dCommand
 			// 해당 쉐도우맵 텍스처를 렌더 타겟으로 설정
 			pd3dCommandList->OMSetRenderTargets(1, &m_pd3dRtvCPUDescriptorHandles[j], TRUE, &m_d3dDsvDescriptorCPUHandle);
 
-			// 오브젝트들을 렌더링해서 그림자 맵을 생성 (깊이값만 기록됨) fuckpoint
+			// 오브젝트들을 렌더링해서 그림자 맵을 생성 (깊이값만 기록됨)
 			CDepthRenderShader::Render(pd3dCommandList, m_ppDepthRenderCameras[j]);
 
 			// 그림자 맵 텍스처를 다시 읽기 가능한 상태로 전환 (Pixel Shader 등에서 사용할 수 있게)
@@ -1468,13 +1470,16 @@ void CDepthRenderShader::PrepareShadowMap(ID3D12GraphicsCommandList* pd3dCommand
 
 void CDepthRenderShader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
-	// Set PSO
+	// 렌더링 모드 설정
+	pCamera->SetRenderMode(CCamera::RenderMode::DepthMap);
+
+	// Set PSO, SetDescriptorHeaps
 	CShader::Render(pd3dCommandList, pCamera);
 
 	pCamera->SetViewportsAndScissorRects(pd3dCommandList);
 	pCamera->UpdateShaderVariables(pd3dCommandList);
 
-	for (auto* pObject : m_pObjectsShader->m_pObjects)
+	for (auto* pObject : m_pIlluminatedObjectsShader->m_pObjects)
 	{
 		if (pObject)
 		{
@@ -1488,7 +1493,7 @@ void CDepthRenderShader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCam
 //
 CShadowMapShader::CShadowMapShader(CIlluminatedObjectsShader* pObjectsShader)
 {
-	m_pObjectsShader = pObjectsShader;
+	m_pIlluminatedObjectsShader = pObjectsShader;
 }
 
 CShadowMapShader::~CShadowMapShader()
@@ -1563,7 +1568,7 @@ void CShadowMapShader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamer
 
 	UpdateShaderVariables(pd3dCommandList);
 
-	for (auto* pObject : m_pObjectsShader->m_pObjects)
+	for (auto* pObject : m_pIlluminatedObjectsShader->m_pObjects)
 	{
 		if (pObject)
 		{
@@ -1571,8 +1576,8 @@ void CShadowMapShader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamer
 			pObject->Render(pd3dCommandList, pCamera);
 		}
 	}
-	m_pObjectsShader->m_pDirectionalLight->UpdateShaderVariables(pd3dCommandList);
-	m_pObjectsShader->m_pDirectionalLight->Render(pd3dCommandList, pCamera);
+	m_pIlluminatedObjectsShader->m_pDirectionalLight->UpdateShaderVariables(pd3dCommandList);
+	m_pIlluminatedObjectsShader->m_pDirectionalLight->Render(pd3dCommandList, pCamera);
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

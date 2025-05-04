@@ -50,6 +50,15 @@ void CScene::BuildDefaultLightsAndMaterials()
 	m_pLights->m_pLights[0].m_fTheta = (float)cos(XMConvertToRadians(20.0f));
 
 	// Shadow 매핑 테스트
+	//m_pLights->m_pLights[0].m_bEnable = true;
+	//m_pLights->m_pLights[0].m_nType = DIRECTIONAL_LIGHT;
+	//m_pLights->m_pLights[0].m_fRange = 2000.0f;
+	//m_pLights->m_pLights[0].m_xmf4Ambient = XMFLOAT4(0.2f, 0.0f, 0.0f, 1.0f);
+	//m_pLights->m_pLights[0].m_xmf4Diffuse = XMFLOAT4(0.73f, 0.73f, 0.73f, 1.0f);
+	//m_pLights->m_pLights[0].m_xmf4Specular = XMFLOAT4(0.3f, 0.3f, 0.3f, 0.0f);
+	//m_pLights->m_pLights[0].m_xmf3Position = XMFLOAT3(1024 * 1.5f, 450.0f, 0);
+	//m_pLights->m_pLights[0].m_xmf3Direction = XMFLOAT3(-1.0f, -1.0f, 0.0f);
+
 	m_pLights->m_pLights[1].m_bEnable = true;
 	m_pLights->m_pLights[1].m_nType = DIRECTIONAL_LIGHT;
 	m_pLights->m_pLights[1].m_fRange = 2000.0f;

@@ -52,6 +52,13 @@ public:
 	virtual void AnimateObjects(float fTimeElapsed) { }
 	virtual void ReleaseObjects() { }
 
+	D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandleForHeapStart() { return(m_pd3dCbvSrvUavDescriptorHeap->GetCPUDescriptorHandleForHeapStart()); }
+	D3D12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptorHandleForHeapStart() { return(m_pd3dCbvSrvUavDescriptorHeap->GetGPUDescriptorHandleForHeapStart()); }
+
+	ID3D12DescriptorHeap*			m_pd3dCbvSrvUavDescriptorHeap = NULL;
+	D3D12_CPU_DESCRIPTOR_HANDLE		m_d3dSrvCPUDescriptorHandle = {};
+	D3D12_GPU_DESCRIPTOR_HANDLE		m_d3dSrvGPUDescriptorHandle = {};
+
 protected:
 	ID3DBlob							*m_pd3dVertexShaderBlob = NULL;
 	ID3DBlob							*m_pd3dPixelShaderBlob = NULL;
@@ -277,6 +284,7 @@ public:
 
 	void PrepareShadowMap(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 
+
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 
 protected:
@@ -293,16 +301,13 @@ protected:
 
 	XMMATRIX						m_xmProjectionToTexture;
 
-	ID3D12DescriptorHeap*			m_pd3dCbvSrvUavDescriptorHeap = NULL;
-	D3D12_CPU_DESCRIPTOR_HANDLE		m_d3dSrvCPUDescriptorHandle = {};
-	D3D12_GPU_DESCRIPTOR_HANDLE		m_d3dSrvGPUDescriptorHandle = {};
 
 public:
 	CTexture* GetDepthTexture() { return(m_pDepthFromLightTexture); }
 	ID3D12Resource* GetDepthTextureResource(UINT nIndex) { return(m_pDepthFromLightTexture->GetResource(nIndex)); }
 
 public:
-	CIlluminatedObjectsShader		*m_pObjectsShader = NULL;
+	CIlluminatedObjectsShader		*m_pIlluminatedObjectsShader = NULL;
 
 protected:
 	LIGHT							*m_pLights = NULL;
@@ -337,7 +342,7 @@ public:
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 
 public:
-	CIlluminatedObjectsShader* m_pObjectsShader = NULL;
+	CIlluminatedObjectsShader* m_pIlluminatedObjectsShader = NULL;
 
 	CTexture* m_pDepthFromLightTexture = NULL;
 };
