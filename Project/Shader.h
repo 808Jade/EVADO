@@ -6,6 +6,7 @@
 
 #include "Object.h"
 #include "Camera.h"
+#include "Map.h"
 
 struct LIGHT;
 
@@ -240,7 +241,7 @@ public:
 	CIlluminatedObjectsShader();
 	virtual ~CIlluminatedObjectsShader();
 
-	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext = NULL);
+	virtual void BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext = NULL, Map* pMap = NULL);
 	virtual void AnimateObjects(float fTimeElapsed);
 	virtual void ReleaseObjects();
 
@@ -250,7 +251,6 @@ public:
 	virtual void OnPostRender(ID3D12GraphicsCommandList* pd3dCommandList);
 
 	BoundingBox CalculateBoundingBox();
-
 	
 public:
 	std::vector<CGameObject*>		m_pObjects;
@@ -283,8 +283,6 @@ public:
 	virtual void ReleaseObjects();
 
 	void PrepareShadowMap(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
-
-
 	virtual void Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera);
 
 protected:
@@ -347,6 +345,8 @@ public:
 	CTexture* m_pDepthFromLightTexture = NULL;
 };
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
 class CTextureToViewportShader : public CShader
 {
 public:

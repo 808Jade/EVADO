@@ -129,7 +129,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 	CIlluminatedObjectsShader* pObjectShader = new CIlluminatedObjectsShader();
 	pObjectShader->CreateShader(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
-	pObjectShader->BuildObjects(pd3dDevice, pd3dCommandList, NULL);
+	pObjectShader->BuildObjects(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, NULL, m_pMap);
 
 	m_xmBoundingBox = pObjectShader->CalculateBoundingBox();
 
@@ -139,6 +139,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	DXGI_FORMAT pdxgiRtvFormats[1] = { DXGI_FORMAT_R32_FLOAT };
 	m_pDepthRenderShader->CreateShader(pd3dDevice, m_pd3dGraphicsRootSignature, D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, 1, pdxgiRtvFormats, DXGI_FORMAT_D32_FLOAT);
 	m_pDepthRenderShader->BuildObjects(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, NULL);
+	CreateShaderResourceViews(pd3dDevice, m_pDepthRenderShader->GetDepthTexture(), 0, 16);
 
 	m_pShadowShader = new CShadowMapShader(pObjectShader);
 	m_pShadowShader->CreateShader(pd3dDevice, m_pd3dGraphicsRootSignature, D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, 1, NULL, DXGI_FORMAT_D24_UNORM_S8_UINT);
@@ -600,7 +601,7 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	pCamera->SetViewportsAndScissorRects(pd3dCommandList);
 	pCamera->UpdateShaderVariables(pd3dCommandList);
 
-	// 3. 그림자 적용 패스 : 그림자를 적용할 객체들을 렌더링 (쉐도우맵에서 객체 깊이값 계산)
+	// 3. 그림자 적용 패스 : 그림자를 적용할 객체들을 렌더링
 	if (m_pShadowShader)
 		m_pShadowShader->Render(pd3dCommandList, pCamera);
 

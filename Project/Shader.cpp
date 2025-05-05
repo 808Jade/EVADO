@@ -261,7 +261,7 @@ void CShader::OnPrepareRender(ID3D12GraphicsCommandList *pd3dCommandList, int nP
 {
 	if (m_pd3dPipelineState) pd3dCommandList->SetPipelineState(m_pd3dPipelineState);
 	if (m_pd3dCbvSrvUavDescriptorHeap) pd3dCommandList->SetDescriptorHeaps(1, &m_pd3dCbvSrvUavDescriptorHeap);
-	std::cout << "[DEBUG] Current Descriptor Heap: " << m_pd3dCbvSrvUavDescriptorHeap << std::endl;
+	//std::cout << "[DEBUG] Current Descriptor Heap: " << m_pd3dCbvSrvUavDescriptorHeap << std::endl;
 }
 
 void CShader::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pCamera)
@@ -685,7 +685,7 @@ BoundingBox CIlluminatedObjectsShader::CalculateBoundingBox()
 	return(xmBoundingBox);
 }
 
-void CIlluminatedObjectsShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext)
+void CIlluminatedObjectsShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext, Map* pMap)
 {
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 
@@ -726,6 +726,12 @@ void CIlluminatedObjectsShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12Gra
 		if (pWhistleModel) delete pWhistleModel;
 	}
 
+	{
+		for (auto* mapObject : pMap->m_vMapObjects)
+		{
+			m_pObjects.push_back(mapObject);
+		}
+	}
 }
 
 void CIlluminatedObjectsShader::ReleaseObjects()
@@ -845,7 +851,8 @@ D3D12_RASTERIZER_DESC CDepthRenderShader::CreateRasterizerState()
 }
 
 // RTV서술자힙, DSV서술자힙, SRV서술자힙, 깊이텍스처리소스, 깊이-스텐실 리소스 생성 및 연결
-void CDepthRenderShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext)
+void CDepthRenderShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, 
+									  ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext)
 {
 	// RTV 힙 생성
 	D3D12_DESCRIPTOR_HEAP_DESC d3dDescriptorHeapDesc;
@@ -950,55 +957,62 @@ void CDepthRenderShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 		m_ppDepthRenderCameras[i]->CreateShaderVariables(pd3dDevice, pd3dCommandList);
 	}
 
-	// CBVSRVUAV힙 생성
-	//D3D12_DESCRIPTOR_HEAP_DESC d3dDescriptorHeapDesc;
-	d3dDescriptorHeapDesc.NumDescriptors = m_pDepthFromLightTexture->GetTextures();
-	d3dDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-	d3dDescriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-	d3dDescriptorHeapDesc.NodeMask = 0;
-	pd3dDevice->CreateDescriptorHeap(&d3dDescriptorHeapDesc, IID_PPV_ARGS(&m_pd3dCbvSrvUavDescriptorHeap));
-	m_d3dSrvCPUDescriptorHandle = m_pd3dCbvSrvUavDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-	m_d3dSrvGPUDescriptorHandle = m_pd3dCbvSrvUavDescriptorHeap->GetGPUDescriptorHandleForHeapStart();
+	// CBVSRVUAV힙 생성 (임시로 사용 후 CScene 힙으로 통합)
+	////D3D12_DESCRIPTOR_HEAP_DESC d3dDescriptorHeapDesc;
+	//d3dDescriptorHeapDesc.NumDescriptors = m_pDepthFromLightTexture->GetTextures();
+	//d3dDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	//d3dDescriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+	//d3dDescriptorHeapDesc.NodeMask = 0;
+	//pd3dDevice->CreateDescriptorHeap(&d3dDescriptorHeapDesc, IID_PPV_ARGS(&m_pd3dCbvSrvUavDescriptorHeap));
+	//m_d3dSrvCPUDescriptorHandle = m_pd3dCbvSrvUavDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+	//m_d3dSrvGPUDescriptorHandle = m_pd3dCbvSrvUavDescriptorHeap->GetGPUDescriptorHandleForHeapStart();
 
-	// 핸들 이동용 임시 변수
-	D3D12_CPU_DESCRIPTOR_HANDLE d3dCurrentCPUHandle = m_d3dSrvCPUDescriptorHandle;
-	D3D12_GPU_DESCRIPTOR_HANDLE d3dCurrentGPUHandle = m_d3dSrvGPUDescriptorHandle;
+	//D3D12_CPU_DESCRIPTOR_HANDLE d3dCurrentCPUHandle = m_d3dSrvCPUDescriptorHandle;
+	//D3D12_GPU_DESCRIPTOR_HANDLE d3dCurrentGPUHandle = m_d3dSrvGPUDescriptorHandle;
 
-	// 실제 텍스처 리소스들에 대해 SRV를 생성해서 디스크립터 힙에 등록
-	for (UINT i = 0; i < MAX_DEPTH_TEXTURES; ++i)
-	{
-		ID3D12Resource* pResource = m_pDepthFromLightTexture->GetResource(i);
+	//// 실제 텍스처 리소스들에 대해 SRV를 생성해서 디스크립터 힙에 등록
+	//for (UINT i = 0; i < MAX_DEPTH_TEXTURES; ++i)
+	//{
+	//	ID3D12Resource* pResource = m_pDepthFromLightTexture->GetResource(i);
 
-		D3D12_SHADER_RESOURCE_VIEW_DESC d3dShaderResourceViewDesc = {};
-		d3dShaderResourceViewDesc.Format = DXGI_FORMAT_R32_FLOAT;
-		d3dShaderResourceViewDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-		d3dShaderResourceViewDesc.Texture2D.MipLevels = -1;
-		d3dShaderResourceViewDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-		d3dShaderResourceViewDesc.Texture2D.MostDetailedMip = 0;
-		d3dShaderResourceViewDesc.Texture2D.PlaneSlice = 0;
-		d3dShaderResourceViewDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+	//	D3D12_SHADER_RESOURCE_VIEW_DESC d3dShaderResourceViewDesc = {};
+	//	d3dShaderResourceViewDesc.Format = DXGI_FORMAT_R32_FLOAT;
+	//	d3dShaderResourceViewDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	//	d3dShaderResourceViewDesc.Texture2D.MipLevels = -1;
+	//	d3dShaderResourceViewDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	//	d3dShaderResourceViewDesc.Texture2D.MostDetailedMip = 0;
+	//	d3dShaderResourceViewDesc.Texture2D.PlaneSlice = 0;
+	//	d3dShaderResourceViewDesc.Texture2D.ResourceMinLODClamp = 0.0f;
 
-		//D3D12_CPU_DESCRIPTOR_HANDLE d3dCbvSrvCPUDescriptorHandle = m_d3dSrvCPUDescriptorHandle;
-		//d3dCbvSrvCPUDescriptorHandle.ptr += i * ::gnCbvSrvDescriptorIncrementSize;
-		//pd3dDevice->CreateShaderResourceView(pResource, &d3dShaderResourceViewDesc, d3dCbvSrvCPUDescriptorHandle);
-		
-		// SRV 생성
-		pd3dDevice->CreateShaderResourceView(pResource, &d3dShaderResourceViewDesc, d3dCurrentCPUHandle);
-		// GPU 핸들 저장
-		m_pDepthFromLightTexture->SetGpuDescriptorHandle(i, d3dCurrentGPUHandle);
+	//	//D3D12_CPU_DESCRIPTOR_HANDLE d3dCbvSrvCPUDescriptorHandle = m_d3dSrvCPUDescriptorHandle;
+	//	//d3dCbvSrvCPUDescriptorHandle.ptr += i * ::gnCbvSrvDescriptorIncrementSize;
+	//	//pd3dDevice->CreateShaderResourceView(pResource, &d3dShaderResourceViewDesc, d3dCbvSrvCPUDescriptorHandle);
+	//	
+	//	// SRV 생성
+	//	pd3dDevice->CreateShaderResourceView(pResource, &d3dShaderResourceViewDesc, d3dCurrentCPUHandle);
+	//	// GPU 핸들 저장
+	//	m_pDepthFromLightTexture->SetGpuDescriptorHandle(i, d3dCurrentGPUHandle);
 
-		// 다음 핸들로 이동
-		d3dCurrentCPUHandle.ptr += ::gnCbvSrvDescriptorIncrementSize;
-		d3dCurrentGPUHandle.ptr += ::gnCbvSrvDescriptorIncrementSize;
+	//	// CScene 힙에 SRV 복사
+	//	D3D12_CPU_DESCRIPTOR_HANDLE sceneCPUHandle = pSceneCbvSrvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+	//	sceneCPUHandle.ptr += i * ::gnCbvSrvDescriptorIncrementSize;
+	//	pd3dDevice->CopyDescriptorsSimple(1, sceneCPUHandle, d3dCurrentCPUHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-		int nRootParameters = m_pDepthFromLightTexture->GetRootParameters();
-		for (int i = 0; i < nRootParameters; i++) m_pDepthFromLightTexture->SetRootParameterIndex(i, 16);
-	}
+	//	std::cout << "[DEBUG] Scene CPU Handle: " << sceneCPUHandle.ptr << std::endl;
+	//	std::cout << "[DEBUG] Source Descriptor Handle: " << d3dCurrentCPUHandle.ptr << std::endl;
+
+	//	// 다음 핸들로 이동
+	//	d3dCurrentCPUHandle.ptr += ::gnCbvSrvDescriptorIncrementSize;
+	//	d3dCurrentGPUHandle.ptr += ::gnCbvSrvDescriptorIncrementSize;
+
+	//	int nRootParameters = m_pDepthFromLightTexture->GetRootParameters();
+	//	for (int i = 0; i < nRootParameters; i++) 
+	//		m_pDepthFromLightTexture->SetRootParameterIndex(i, 16);
+	//}
 
 	// 렌더링 전에 힙 바인딩
 	//pd3dCommandList->SetDescriptorHeaps(1, &m_pd3dCbvSrvUavDescriptorHeap);
 	//pd3dCommandList->SetGraphicsRootDescriptorTable(16, m_d3dSrvGPUDescriptorHandle);
-
 	// 쉐이더에서 Shadow Map Texture를 SRV로 접근할 수 있도록 준비
 	//CScene::CreateCbvSrvDescriptorHeaps(pd3dDevice, 0, m_pDepthFromLightTexture->GetTextures());
 	//실제 텍스처 리소스들에 대해 SRV를 생성해서 디스크립터 힙에 등록

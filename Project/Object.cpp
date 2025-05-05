@@ -161,6 +161,14 @@ D3D12_SHADER_RESOURCE_VIEW_DESC CTexture::GetShaderResourceViewDesc(int nIndex)
 	switch (nTextureType)
 	{
 	case RESOURCE_TEXTURE2D: //(d3dResourceDesc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE2D)(d3dResourceDesc.DepthOrArraySize == 1)
+		//d3dShaderResourceViewDesc.Format = DXGI_FORMAT_R32_FLOAT;
+		//d3dShaderResourceViewDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		//d3dShaderResourceViewDesc.Texture2D.MipLevels = -1;
+		//d3dShaderResourceViewDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		//d3dShaderResourceViewDesc.Texture2D.MostDetailedMip = 0;
+		//d3dShaderResourceViewDesc.Texture2D.PlaneSlice = 0;
+		//d3dShaderResourceViewDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+		//break;
 	case RESOURCE_TEXTURE2D_ARRAY: //[]
 		d3dShaderResourceViewDesc.Format = d3dResourceDesc.Format;
 		d3dShaderResourceViewDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
@@ -857,7 +865,7 @@ void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pC
 			{
 				if (m_ppMaterials[i])
 				{
-					if (CCamera::RenderMode::Standard == pCamera->GetRenderMode())
+					if (CCamera::RenderMode::DepthMap != pCamera->GetRenderMode())
 					{
 						if (m_ppMaterials[i]->m_pShader)
 						{
