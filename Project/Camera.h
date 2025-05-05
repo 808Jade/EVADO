@@ -45,7 +45,7 @@ public:
 	XMFLOAT4X4						m_xmf4x4View;
 	XMFLOAT4X4						m_xmf4x4Projection;
 
-	enum class RenderMode { Standard, DepthMap };
+	enum class RenderMode { Standard, DepthMap, ShadowMap };
 	RenderMode m_renderMode = RenderMode::Standard;
 
 	void SetRenderMode(RenderMode mode) { m_renderMode = mode; }

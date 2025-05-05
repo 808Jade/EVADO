@@ -857,8 +857,7 @@ void CGameObject::Render(ID3D12GraphicsCommandList *pd3dCommandList, CCamera *pC
 			{
 				if (m_ppMaterials[i])
 				{
-					// DepthMap 모드가 아닌 경우에만 머티리얼 및 셰이더 업데이트
-					if (pCamera->GetRenderMode() != CCamera::RenderMode::DepthMap)
+					if (CCamera::RenderMode::Standard == pCamera->GetRenderMode())
 					{
 						if (m_ppMaterials[i]->m_pShader)
 						{

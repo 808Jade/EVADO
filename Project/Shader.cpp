@@ -857,7 +857,7 @@ void CDepthRenderShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 	HRESULT hResult = pd3dDevice->CreateDescriptorHeap(&d3dDescriptorHeapDesc, IID_PPV_ARGS(&m_pd3dRtvDescriptorHeap));
 
 	// 깊이 텍스처 리소스 생성
-	m_pDepthFromLightTexture = new CTexture(MAX_DEPTH_TEXTURES, RESOURCE_TEXTURE2D_ARRAY, 0, 1);
+	m_pDepthFromLightTexture = new CTexture(MAX_DEPTH_TEXTURES, RESOURCE_TEXTURE2D_ARRAY, 0, MAX_DEPTH_TEXTURES);
 	D3D12_CLEAR_VALUE d3dClearValue = { DXGI_FORMAT_R32_FLOAT, { 1.0f, 1.0f, 1.0f, 1.0f } };
 	for (UINT i = 0; i < MAX_DEPTH_TEXTURES; i++)
 		m_pDepthFromLightTexture->CreateTexture(pd3dDevice,
@@ -984,15 +984,15 @@ void CDepthRenderShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 		
 		// SRV 생성
 		pd3dDevice->CreateShaderResourceView(pResource, &d3dShaderResourceViewDesc, d3dCurrentCPUHandle);
-		// (선택) GPU 핸들 저장
-		//m_pDepthFromLightTexture->SetSrvGpuDescriptorHandle(i, d3dCurrentGPUHandle);
+		// GPU 핸들 저장
+		m_pDepthFromLightTexture->SetGpuDescriptorHandle(i, d3dCurrentGPUHandle);
 
 		// 다음 핸들로 이동
 		d3dCurrentCPUHandle.ptr += ::gnCbvSrvDescriptorIncrementSize;
 		d3dCurrentGPUHandle.ptr += ::gnCbvSrvDescriptorIncrementSize;
 
 		int nRootParameters = m_pDepthFromLightTexture->GetRootParameters();
-		for (int i = 0; i < nRootParameters; i++) m_pDepthFromLightTexture->SetRootParameterIndex(i, 16 + i);
+		for (int i = 0; i < nRootParameters; i++) m_pDepthFromLightTexture->SetRootParameterIndex(i, 16);
 	}
 
 	// 렌더링 전에 힙 바인딩
@@ -1564,6 +1564,9 @@ void CShadowMapShader::ReleaseObjects()
 
 void CShadowMapShader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera)
 {
+	// 렌더링 모드 설정
+	pCamera->SetRenderMode(CCamera::RenderMode::ShadowMap);
+
 	CShader::Render(pd3dCommandList, pCamera);
 
 	UpdateShaderVariables(pd3dCommandList);
@@ -1576,8 +1579,12 @@ void CShadowMapShader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamer
 			pObject->Render(pd3dCommandList, pCamera);
 		}
 	}
-	m_pIlluminatedObjectsShader->m_pDirectionalLight->UpdateShaderVariables(pd3dCommandList);
-	m_pIlluminatedObjectsShader->m_pDirectionalLight->Render(pd3dCommandList, pCamera);
+
+	if (m_pIlluminatedObjectsShader->m_pDirectionalLight)
+	{
+		m_pIlluminatedObjectsShader->m_pDirectionalLight->UpdateShaderVariables(pd3dCommandList);
+		m_pIlluminatedObjectsShader->m_pDirectionalLight->Render(pd3dCommandList, pCamera);
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
