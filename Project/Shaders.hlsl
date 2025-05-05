@@ -298,6 +298,9 @@ struct VS_LIGHTING_INPUT
 {
     float3 position : POSITION;
     float3 normal : NORMAL;
+    float2 uv : TEXCOORD;
+    float3 tangent : TANGENT;
+    float3 bitangent : BITANGENT;
 };
 
 struct VS_LIGHTING_OUTPUT
@@ -353,8 +356,10 @@ struct VS_SHADOW_MAP_OUTPUT
     float4 position : SV_POSITION;
     float3 positionW : POSITION;
     float3 normalW : NORMAL;
-
-    float4 shadowMapUVs[MAX_LIGHTS] : TEXCOORD0;
+    float2 uv : TEXCOORD0; // 텍스처 좌표 추가
+    float3 tangentW : TANGENT; // TBN 데이터 추가
+    float3 bitangentW : BITANGENT;
+    float4 shadowMapUVs[MAX_LIGHTS] : TEXCOORD1;
 };
 
 VS_SHADOW_MAP_OUTPUT VSShadowMapShadow(VS_LIGHTING_INPUT input)
@@ -365,6 +370,9 @@ VS_SHADOW_MAP_OUTPUT VSShadowMapShadow(VS_LIGHTING_INPUT input)
     output.positionW = positionW.xyz;
     output.position = mul(mul(positionW, gmtxView), gmtxProjection);
     output.normalW = mul(float4(input.normal, 0.0f), gmtxGameObject).xyz;
+    output.uv = input.uv; // 텍스처 좌표 전달
+    output.tangentW = mul(float4(input.tangent, 0.0f), gmtxGameObject).xyz;
+    output.bitangentW = mul(float4(input.bitangent, 0.0f), gmtxGameObject).xyz;
 
     for (int i = 0; i < MAX_LIGHTS; i++)
     {
@@ -377,9 +385,42 @@ VS_SHADOW_MAP_OUTPUT VSShadowMapShadow(VS_LIGHTING_INPUT input)
 
 float4 PSShadowMapShadow(VS_SHADOW_MAP_OUTPUT input) : SV_TARGET
 {
-    float4 cIllumination = Lighting(input.positionW, normalize(input.normalW), true, input.shadowMapUVs);
+    // 텍스처 샘플링
+    float4 cAlbedoColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    if (gnTexturesMask & MATERIAL_ALBEDO_MAP)
+        cAlbedoColor = gtxtAlbedoTexture.Sample(gssWrap, input.uv);
+    float4 cSpecularColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    if (gnTexturesMask & MATERIAL_SPECULAR_MAP)
+        cSpecularColor = gtxtSpecularTexture.Sample(gssWrap, input.uv);
+    float4 cNormalColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    if (gnTexturesMask & MATERIAL_NORMAL_MAP)
+        cNormalColor = gtxtNormalTexture.Sample(gssWrap, input.uv);
+    float4 cMetallicColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    if (gnTexturesMask & MATERIAL_METALLIC_MAP)
+        cMetallicColor = gtxtMetallicTexture.Sample(gssWrap, input.uv);
+    float4 cEmissionColor = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    if (gnTexturesMask & MATERIAL_EMISSION_MAP)
+        cEmissionColor = gtxtEmissionTexture.Sample(gssWrap, input.uv);
 
-    return (cIllumination);
+    // 노멀 계산 (노멀 맵 처리)
+    float3 normalW;
+    float4 cColor = cAlbedoColor + cSpecularColor + cMetallicColor + cEmissionColor;
+    if (gnTexturesMask & MATERIAL_NORMAL_MAP)
+    {
+        float3x3 TBN = float3x3(normalize(input.tangentW), normalize(input.bitangentW), normalize(input.normalW));
+        float3 vNormal = normalize(cNormalColor.rgb * 2.0f - 1.0f); // [0, 1] → [-1, 1]
+        normalW = normalize(mul(vNormal, TBN));
+    }
+    else
+    {
+        normalW = normalize(input.normalW);
+    }
+
+    // 조명 및 그림자 계산
+    float4 cIllumination = Lighting(input.positionW, normalW, true, input.shadowMapUVs);
+
+    // 텍스처 색상과 조명 결과 혼합
+    return (lerp(cColor, cIllumination, 0.5f));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
