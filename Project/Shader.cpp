@@ -260,7 +260,8 @@ void CShader::CreateShader(ID3D12Device* pd3dDevice, ID3D12RootSignature* pd3dGr
 void CShader::OnPrepareRender(ID3D12GraphicsCommandList *pd3dCommandList, int nPipelineState)
 {
 	if (m_pd3dPipelineState) pd3dCommandList->SetPipelineState(m_pd3dPipelineState);
-	if (m_pd3dCbvSrvUavDescriptorHeap) pd3dCommandList->SetDescriptorHeaps(1, &m_pd3dCbvSrvUavDescriptorHeap);
+	// 더 이상 쉐이더는 m_pd3dCbvSrvUavDescriptorHeap을 갖지 않는다.
+	//if (m_pd3dCbvSrvUavDescriptorHeap) pd3dCommandList->SetDescriptorHeaps(1, &m_pd3dCbvSrvUavDescriptorHeap);
 	//std::cout << "[DEBUG] Current Descriptor Heap: " << m_pd3dCbvSrvUavDescriptorHeap << std::endl;
 }
 
@@ -634,10 +635,10 @@ D3D12_INPUT_LAYOUT_DESC CIlluminatedShader::CreateInputLayout()
 	D3D12_INPUT_ELEMENT_DESC* pd3dInputElementDescs = new D3D12_INPUT_ELEMENT_DESC[nInputElementDescs];
 
 	pd3dInputElementDescs[0] = { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
-	pd3dInputElementDescs[1] = { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
-	pd3dInputElementDescs[2] = { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
-	pd3dInputElementDescs[3] = { "TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 32, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
-	pd3dInputElementDescs[4] = { "BITANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 44, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[1] = { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 1, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[2] = { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 2, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[3] = { "TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 3, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
+	pd3dInputElementDescs[4] = { "BITANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 4, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 };
 
 	D3D12_INPUT_LAYOUT_DESC d3dInputLayoutDesc;
 	d3dInputLayoutDesc.pInputElementDescs = pd3dInputElementDescs;
@@ -854,8 +855,7 @@ D3D12_RASTERIZER_DESC CDepthRenderShader::CreateRasterizerState()
 }
 
 // RTV서술자힙, DSV서술자힙, SRV서술자힙, 깊이텍스처리소스, 깊이-스텐실 리소스 생성 및 연결
-void CDepthRenderShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, 
-									  ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext)
+void CDepthRenderShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, void* pContext)
 {
 	// RTV 힙 생성
 	D3D12_DESCRIPTOR_HEAP_DESC d3dDescriptorHeapDesc;
@@ -1020,6 +1020,7 @@ void CDepthRenderShader::BuildObjects(ID3D12Device* pd3dDevice, ID3D12GraphicsCo
 	//CScene::CreateCbvSrvDescriptorHeaps(pd3dDevice, 0, m_pDepthFromLightTexture->GetTextures());
 	//실제 텍스처 리소스들에 대해 SRV를 생성해서 디스크립터 힙에 등록
 	//CreateShaderResourceViews(pd3dDevice, m_pDepthFromLightTexture, 0, 16);
+	CScene::CreateShaderResourceViews(pd3dDevice, m_pDepthFromLightTexture, 0, 16, "DepthRenderShader");
 
 	CreateShaderVariables(pd3dDevice, pd3dCommandList);
 }
@@ -1490,7 +1491,7 @@ void CDepthRenderShader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCam
 	// 렌더링 모드 설정
 	pCamera->SetRenderMode(CCamera::RenderMode::DepthMap);
 
-	// Set PSO, SetDescriptorHeaps
+	// Set PSO
 	CShader::Render(pd3dCommandList, pCamera);
 
 	pCamera->SetViewportsAndScissorRects(pd3dCommandList);
@@ -1586,6 +1587,7 @@ void CShadowMapShader::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamer
 
 	CShader::Render(pd3dCommandList, pCamera);
 
+	// 광원에서 본 깊이 정보를 저장하는 텍스처를 셰이더에 업데이트해서 픽셀 셰이더에서 그림자 계산에 활용할 수 있도록 함
 	UpdateShaderVariables(pd3dCommandList);
 
 	for (auto* pObject : m_pIlluminatedObjectsShader->m_pObjects)
@@ -1792,6 +1794,6 @@ void CTextureToScreenShader::Render(ID3D12GraphicsCommandList* pd3dCommandList, 
 	for (int i = 0; i < m_nMeshes; i++)
 	{
 		if (m_pTexture) m_pTexture->UpdateShaderVariable(pd3dCommandList, 0, i);
-		if (m_ppMeshes[i]) m_ppMeshes[i]->Render(pd3dCommandList, 0); // ¿©±â
+		if (m_ppMeshes[i]) m_ppMeshes[i]->Render(pd3dCommandList, 0); // 여기
 	}
 }
