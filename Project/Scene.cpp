@@ -139,7 +139,6 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	DXGI_FORMAT pdxgiRtvFormats[1] = { DXGI_FORMAT_R32_FLOAT };
 	m_pDepthRenderShader->CreateShader(pd3dDevice, m_pd3dGraphicsRootSignature, D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, 1, pdxgiRtvFormats, DXGI_FORMAT_D32_FLOAT);
 	m_pDepthRenderShader->BuildObjects(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, NULL);
-	// 실제 텍스처 리소스들에 대해 SRV를 생성해서 디스크립터 힙에 등록
 
 	m_pShadowShader = new CShadowMapShader(pObjectShader);
 	m_pShadowShader->CreateShader(pd3dDevice, m_pd3dGraphicsRootSignature, D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, 1, NULL, DXGI_FORMAT_D24_UNORM_S8_UINT);
@@ -629,15 +628,15 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 		pd3dCommandList->SetGraphicsRootSignature(m_pd3dGraphicsRootSignature);
 
 	if (m_pd3dCbvSrvDescriptorHeap)
-		pd3dCommandList->SetDescriptorHeaps(1, &m_pd3dCbvSrvDescriptorHeap); // 반드시 CBV 설정 전에
+		pd3dCommandList->SetDescriptorHeaps(1, &m_pd3dCbvSrvDescriptorHeap);
 
 	// 3. 그림자 적용 패스 : 그림자를 적용할 객체들을 렌더링
 	if (m_pShadowShader)
 		m_pShadowShader->Render(pd3dCommandList, pCamera);
 
 	// 4. Shadow Map 디버그 시각화용 렌더링 (작은 뷰포트에 쉐도우맵 출력)
-	if (m_pShadowMapToViewport)
-		m_pShadowMapToViewport->Render(pd3dCommandList, pCamera);
+	//if (m_pShadowMapToViewport)
+	//	m_pShadowMapToViewport->Render(pd3dCommandList, pCamera);
 
 	// 5. 뷰포트/카메라 정보 복구 (혹시 Shadow Pass에서 변경되었을 수 있음)
 	pCamera->SetViewportsAndScissorRects(pd3dCommandList);
@@ -646,7 +645,7 @@ void CScene::Render(ID3D12GraphicsCommandList* pd3dCommandList, CCamera* pCamera
 	// 7. Scene의 공통 변수 업데이트 (예: Light, Material 등)
 	UpdateShaderVariables(pd3dCommandList);
 
-	// 8. 라이트 상수 버퍼 바인딩 (루트 시그니처의 2번 슬롯이라고 가정)
+	// 8. 라이트 상수 버퍼 바인딩 (루트 시그니처[2])
 	if (m_pd3dcbLights)
 	{
 		D3D12_GPU_VIRTUAL_ADDRESS d3dcbLightsGpuVirtualAddress = m_pd3dcbLights->GetGPUVirtualAddress();
