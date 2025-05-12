@@ -7,11 +7,6 @@ class Item : public CGameObject
 public:
 	Item() {};
 	virtual ~Item() {};
-
-	virtual void Animate(float fTimeElapsed);
-
-protected:
-	float m_fFallingSpeed; // ³«ÇÏ ¼Óµµ
 };
 
 

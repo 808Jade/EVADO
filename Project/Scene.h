@@ -54,7 +54,7 @@ public:
 	virtual void UpdateShaderVariables(ID3D12GraphicsCommandList *pd3dCommandList);
 	virtual void ReleaseShaderVariables();
 
-	virtual void BuildDefaultLightsAndMaterials(bool toggle);
+	virtual void BuildDefaultLightsAndMaterials();
 	virtual void BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *pd3dCommandList);
 	virtual void ReleaseObjects();
 
@@ -69,17 +69,11 @@ public:
 
 	CPlayer								*m_pPlayer = NULL;
 
-	std::vector<OtherPlayer*>				m_vPlayers;
-	int										m_nOtherPlayers = 0;
-	OtherPlayer**							m_ppOtherPlayers;
-
 	void SetPlayer(CPlayer* pPlayer) { m_pPlayer = pPlayer; }
 	CPlayer* GetPlayer() { return(m_pPlayer); }
  
-	ID3D12RootSignature						*m_pd3dGraphicsRootSignature = NULL;
-
 protected:
-	//ID3D12RootSignature					*m_pd3dGraphicsRootSignature = NULL;
+	ID3D12RootSignature					*m_pd3dGraphicsRootSignature = NULL;
 
 	static ID3D12DescriptorHeap			*m_pd3dCbvSrvDescriptorHeap;
 
@@ -94,8 +88,8 @@ protected:
 	static D3D12_GPU_DESCRIPTOR_HANDLE	m_d3dSrvGPUDescriptorNextHandle;
 
 	//server
-	//std::unordered_map<long long, CRemotePlayer*> m_remotePlayers;
-	//CRITICAL_SECTION m_csRemotePlayers;
+	std::unordered_map<long long, CRemotePlayer*> m_remotePlayers;
+	CRITICAL_SECTION m_csRemotePlayers;
 
 public:
 	static void CreateCbvSrvDescriptorHeaps(ID3D12Device *pd3dDevice, int nConstantBufferViews, int nShaderResourceViews);
@@ -149,21 +143,6 @@ public:
 
 	void InitializeCollisionSystem();
 	void GenerateGameObjectsBoundingBox();
-  
-	void AddItem(long long id, ITEM_TYPE type, const XMFLOAT3& position);
-
-	void OnOtherClientConnedted()
-	{
-		for (int i = 0; i < m_nOtherPlayers; ++i)
-		{
-			m_ppOtherPlayers[i]->isConnedted = true;
-		}
-	}
-
-	void UpdateOtherPlayerPosition(int clinetnum, XMFLOAT3 position)
-	{
-		m_ppOtherPlayers[clinetnum]->SetPosition(position);
-	}
 };
 
 class CMainScene : public CScene

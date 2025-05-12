@@ -1,6 +1,6 @@
-#include "stdafx.h"
 #include "Network.h"
-#include "GameFramework.h"
+#include "Player.h"
+
 
 CScene* g_pScene = nullptr;
 ID3D12Device* g_pd3dDevice = nullptr;
@@ -8,14 +8,7 @@ ID3D12GraphicsCommandList* g_pd3dCommandList = nullptr;
 ID3D12RootSignature* g_pd3dGraphicsRootSignature = nullptr;
 void* g_pContext = nullptr;
 
-extern CGameFramework gGameFramework;
-
-std::unordered_map<long long, OtherPlayer*> g_other_players;
-std::mutex g_player_mutex; // Î©ÄÌã∞Ïä§Î†àÎìú Ï†ëÍ∑º Î∞©ÏßÄ
-
-std::unordered_map<long long, Item*> g_items;
-std::mutex g_item_mutex;
-
+std::unordered_map<long long, CPlayer> g_other_players;
 SOCKET ConnectSocket = INVALID_SOCKET;
 HANDLE g_hIOCP = INVALID_HANDLE_VALUE;
 
@@ -25,8 +18,7 @@ CPlayer player;
 CGameObject object;
 long long g_myid = 0;
 
-char recv_buffer[MAX_BUFFER];
-int  saved_data = 0;
+
 
 void PostRecv();
 
@@ -41,20 +33,20 @@ DWORD WINAPI WorkerThread(LPVOID lpParam) {
 
         if (!result || bytesTransferred == 0) {
             int error_code = result ? WSAGetLastError() : WSAECONNRESET;
-            std::cerr << "[ÌÅ¥Îùº] Ïó∞Í≤∞ Ï¢ÖÎ£å. Ïò§Î•ò ÏΩîÎìú: " << error_code << std::endl;
+            std::cerr << "[≈¨∂Û] ø¨∞· ¡æ∑·. ø¿∑˘ ƒ⁄µÂ: " << error_code << std::endl;
 
-            // 1. ÏÜåÏºì Ï†ïÎ¶¨
+            // 1. º“ƒœ ¡§∏Æ
             if (ConnectSocket != INVALID_SOCKET) {
                 closesocket(ConnectSocket);
                 ConnectSocket = INVALID_SOCKET;
             }
 
-            // 2. Îã§Î•∏ ÌîåÎ†àÏù¥Ïñ¥ Îç∞Ïù¥ÌÑ∞ Ï¥àÍ∏∞Ìôî
+            // 2. ¥Ÿ∏• «√∑π¿ÃæÓ µ•¿Ã≈Õ √ ±‚»≠
             g_other_players.clear();
             g_myid = 0;
 
-            // 3. ÏÑúÎ≤ÑÏóê Ïó∞Í≤∞ Ï¢ÖÎ£å ÏïåÎ¶º (ÏòµÏÖò)
-            //PostQuitMessage(0); // GUI Ïï†ÌîåÎ¶¨ÏºÄÏù¥ÏÖòÏù∏ Í≤ΩÏö∞
+            // 3. º≠πˆø° ø¨∞· ¡æ∑· æÀ∏≤ (ø…º«)
+            //PostQuitMessage(0); // GUI æ÷«√∏Æƒ…¿Ãº«¿Œ ∞ÊøÏ
 
             delete overlapped;
             continue;
@@ -103,7 +95,7 @@ void send_packet(void* packet) {
     int result = WSASend(ConnectSocket, &overlapped->wsaBuf, 1, nullptr, 0, reinterpret_cast<LPWSAOVERLAPPED>(overlapped), nullptr);
 
     if (result == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
-        std::cerr << "WSASend Ïò§Î•ò: " << WSAGetLastError() << std::endl;
+        std::cerr << "WSASend ø¿∑˘: " << WSAGetLastError() << std::endl;
         delete overlapped;
     }
 
@@ -114,57 +106,57 @@ void InitializeNetwork()
 {
     WSAStartup(MAKEWORD(2, 2), &wsaData);
 
-    // 1. IOCP Ìï∏Îì§ ÏÉùÏÑ±
+    // 1. IOCP «⁄µÈ ª˝º∫
     g_hIOCP = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, NUM_WORKER_THREADS);
 
-    // 2. ÏõåÏª§ Ïä§Î†àÎìú ÏÉùÏÑ±
+    // 2. øˆƒø Ω∫∑πµÂ ª˝º∫
     for (int i = 0; i < NUM_WORKER_THREADS; ++i) {
         CreateThread(NULL, 0, WorkerThread, NULL, 0, NULL);
     }
 
-    // 3. Overlapped ÏÜåÏºì ÏÉùÏÑ±
+    // 3. Overlapped º“ƒœ ª˝º∫
     ConnectSocket = WSASocket(AF_INET, SOCK_STREAM, IPPROTO_TCP, NULL, 0, WSA_FLAG_OVERLAPPED);
 
-    // 4. ÎÖºÎ∏îÎ°úÌÇπ ÏÜåÏºì ÏÑ§Ï†ï
+    // 4. ≥Ì∫Ì∑Œ≈∑ º“ƒœ º≥¡§
     u_long nonBlockingMode = 1;
     ioctlsocket(ConnectSocket, FIONBIO, &nonBlockingMode);
 
-    // 5. ÎπÑÎèôÍ∏∞ Ïó∞Í≤∞ ÏÑ§Ï†ï
+    // 5. ∫Òµø±‚ ø¨∞· º≥¡§
     sockaddr_in serverAddr{};
     serverAddr.sin_family = AF_INET;
     inet_pton(AF_INET, "127.0.0.1", &serverAddr.sin_addr);
     serverAddr.sin_port = htons(SERVER_PORT);
 
-    // 6. ÎπÑÎèôÍ∏∞ Ïó∞Í≤∞ ÏãúÏûë
+    // 6. ∫Òµø±‚ ø¨∞· Ω√¿€
     int connectResult = WSAConnect(ConnectSocket, (sockaddr*)&serverAddr, sizeof(serverAddr), NULL, NULL, NULL, NULL);
 
     if (connectResult == SOCKET_ERROR) {
         int err = WSAGetLastError();
         if (err != WSAEWOULDBLOCK) {
-            std::cerr << "Ïó∞Í≤∞ Ïã§Ìå®: " << err << std::endl;
+            std::cerr << "ø¨∞· Ω«∆–: " << err << std::endl;
             closesocket(ConnectSocket);
             WSACleanup();
             exit(1);
         }
     }
 
-    // 7. IOCPÏóê ÏÜåÏºì Îì±Î°ù
+    // 7. IOCPø° º“ƒœ µÓ∑œ
     CreateIoCompletionPort((HANDLE)ConnectSocket, g_hIOCP, 0, 0);
 
-    // 8. Ï¥àÍ∏∞ ÏàòÏã† ÏûëÏóÖ ÏãúÏûë
+    // 8. √ ±‚ ºˆΩ≈ ¿€æ˜ Ω√¿€
     PostRecv();
 
-    std::cout << "ÏÑúÎ≤ÑÏóê ÏÑ±Í≥µÏ†ÅÏúºÎ°ú Ïó∞Í≤∞ÎêòÏóàÏäµÎãàÎã§." << std::endl;
+    std::cout << "º≠πˆø° º∫∞¯¿˚¿∏∑Œ ø¨∞·µ«æ˙Ω¿¥œ¥Ÿ." << std::endl;
 
-    // 9. Î°úÍ∑∏Ïù∏ Ìå®ÌÇ∑ Ï†ÑÏÜ°
+    // 9. ∑Œ±◊¿Œ ∆–≈∂ ¿¸º€
     cs_packet_login p;
     p.size = sizeof(p);
     p.type = CS_P_LOGIN;
-    // p.position = player.GetPosition();
+   // p.position = player.GetPosition();
     strcpy_s(p.name, sizeof(p.name), user_name.c_str());
     send_packet(&p);
 
-    std::cout << "[ÌÅ¥Îùº] Î°úÍ∑∏Ïù∏ Ìå®ÌÇ∑ Ï†ÑÏÜ°: Ïù¥Î¶Ñ=" << p.name << std::endl;
+    std::cout << "[≈¨∂Û] ∑Œ±◊¿Œ ∆–≈∂ ¿¸º€: ¿Ã∏ß=" << p.name << "\n";
 }
 
 void ProcessPacket(char* ptr)
@@ -172,145 +164,119 @@ void ProcessPacket(char* ptr)
 
     const unsigned char packet_type = ptr[1];
 
-    std::cout << "[Client] Packet - Type : " << (int)packet_type << std::endl;
+    std::cout << "[≈¨∂Û] ∆–≈∂ √≥∏Æ Ω√¿€ - ≈∏¿‘: " << (int)packet_type << "\n";
 
     switch (packet_type)
     {
-    case SC_P_USER_INFO: // ÌÅ¥ÎùºÏù¥Ïñ∏Ìä∏Ïùò Ï†ïÎ≥¥Î•º Í∞ÄÏßÄÍ≥† ÏûàÎäî Ìå®ÌÇ∑ ÌÉÄÏûÖ
+    case SC_P_USER_INFO: // ≈¨∂Û¿Ãæ∆Æ¿« ¡§∫∏∏¶ ∞°¡ˆ∞Ì ¿÷¥¬ ∆–≈∂ ≈∏¿‘
     {
         sc_packet_user_info* packet = reinterpret_cast<sc_packet_user_info*>(ptr);
 
+        std::cout << "[≈¨∂Û] ≥ª ¡§∫∏ ºˆΩ≈ - ID:" << packet->id << " ¿ßƒ°(" << packet->position.x << "," << packet->position.y << "," << packet->position.z << ")\n";
+
         g_myid = packet->id;
-        //player.SetPosition(packet->position);
+        player.SetPosition(packet->position);
 
-
-        std::cout << "[Client] My Player : " << packet->id << std::endl;
-        std::cout << "[Client] My Player Information ID:" << packet->id
-            << " Positino(" << packet->position.x << "," << packet->position.y << "," << packet->position.z << ")"
-            << " Look(" << packet->look.x << "," << packet->look.y << "," << packet->look.z << ")"
-            << " Right(" << packet->right.x << "," << packet->right.y << "," << packet->right.z << ")"
-            << "Animation : " << static_cast<int>(packet ->animState)
-            << std::endl;
+        if (player.GetCamera()) {
+            player.GetCamera()->SetPosition(packet->position);
+        }
         break;
     }
 
-    case SC_P_ENTER: // ÏÉàÎ°ú Îì§Ïñ¥Ïò® ÌîåÎ†àÏù¥Ïñ¥Ïùò Ï†ïÎ≥¥Î•º Ìè¨Ìï®ÌïòÍ≥† ÏûàÎäî Ìå®ÌÇ∑ ÌÉÄÏûÖ
+    case SC_P_LOGIN_FAIL:  // ∑Œ±◊¿Œ Ω«∆– √≥∏Æ
+    {
+        std::cerr << "∑Œ±◊¿Œ Ω«∆–: ¿ﬂ∏¯µ» ∫Òπ–π¯»£¿‘¥œ¥Ÿ." << std::endl;
+        closesocket(ConnectSocket);
+        exit(1);
+        break;
+    }
+
+    case SC_P_ENTER: // ªı∑Œ µÈæÓø¬ «√∑π¿ÃæÓ¿« ¡§∫∏∏¶ ∆˜«‘«œ∞Ì ¿÷¥¬ ∆–≈∂ ≈∏¿‘
     {
         sc_packet_enter* packet = reinterpret_cast<sc_packet_enter*>(ptr);
         int id = packet->id;
+        std::cout << "[≈¨∂Û] ≥ª «√∑π¿ÃæÓ ª˝º∫: " << id << std::endl;
 
-        if (id == g_myid) break;
+        if (id == g_myid) { // ¿⁄Ω≈¿« æ∆πŸ≈∏ ª˝º∫ π◊ ƒ´∏ﬁ∂Û ¿ßƒ° ¡∂¡§            
+            std::cout << "[≈¨∂Û] ªı «√∑π¿ÃæÓ ª˝º∫: " << id
+                << " (" << packet->name << ")" << std::endl;
 
-        std::cout << "[Client] New Player " << id << "Connect " << "\n";
-        std::cout << "[Client] New Player Information Recv "
-            << " Position(" << packet->position.x << "," << packet->position.y << "," << packet->position.z << ")"
-            << " Look(" << packet->look.x << "," << packet->look.y << "," << packet->look.z << ")"
-            << " Right(" << packet->right.x << "," << packet->right.y << "," << packet->right.z << ")"
-            << "Animation : " << static_cast<int>(packet->animState)
-            << std::endl;
-        
-        // Ïî¨Ïóê OtherPlayerÍ∞Ä Îî± ÎÇòÌÉÄÎÇúÎã§
-        gGameFramework.OnOtherClientConnected();
+            // πÿø° ¿Ã∞≈ ∏¬¥¬¡ˆ ∏∏£∞⁄¿Ω..
+            //g_pScene->AddRemotePlayer(packet->id, packet->position, g_pd3dDevice, g_pd3dCommandList, g_pd3dGraphicsRootSignature, g_pContext);
+
+        }
+        else if (id < MAX_USER) {  // ¥Ÿ∏•«√∑π¿ÃæÓ show()
+           
+        }
+        else { // NPC ¥„¥Á
+            std::cout << "[≈¨∂Û] NPC ª˝º∫: " << id << std::endl;
+
+        }
 
         break;
     }
-
-    case SC_P_MOVE: // ÏÉÅÎåÄ ÌîåÎ†àÏù¥Ïñ¥ (ÏõÄÏßÅÏù¥Î©¥) Ï¢åÌëú Î∞õÍ∏∞
+    case SC_P_MOVE: 
     {
         sc_packet_move* packet = reinterpret_cast<sc_packet_move*>(ptr);
         int other_id = packet->id;
+        if (other_id == g_myid) { // ¿⁄±‚ ¿ßƒ° ∞ªΩ≈
+            std::cout << "[≈¨∂Û] ≥ª ¿ßƒ° ¿Ãµø - ID: " << other_id << " (" 
+                << packet->position.x << ", " 
+                << packet->position.y << ", " 
+                << packet->position.z << ")\n";
 
-        if (other_id == g_myid) break;
 
-        // OtherPlayerÏùò ÏúÑÏπòÎ•º Î∞òÏòÅÌïúÎã§
-        if (!gGameFramework.isLoading && !gGameFramework.isStartScene) {
-            packet->position.x += 3.8;
-            gGameFramework.UpdateOtherPlayerPosition(0, packet->position);
+        }
+        else if (other_id < MAX_USER) { // ¥Ÿ∏• «√∑π¿ÃæÓ ¿ßƒ° ∞ªΩ≈
+            // ¥Ÿ∏• «√∑π¿ÃæÓ ¿ßƒ° æ˜µ•¿Ã∆Æ »Æ¿Œ
+            std::cout << "[≈¨∂Û] " << other_id << "π¯ «√∑π¿ÃæÓ ¿ßƒ° ∞ªΩ≈: ("
+                << packet->position.x << ", "
+                << packet->position.y << ", "
+                << packet->position.z << ")\n";
+
+            // ¥Ÿ∏•«√∑π¿ÃæÓ ∫∏¿Ã∞‘ «œ¥¬∫Œ∫– ≥÷æÓæﬂ «“µÌ?
+            //g_pScene->UpdateRemotePlayer(packet->id, packet->position);
+
+        }
+        else { //NPC ¿ßƒ° ∞ªΩ≈
+            std::cout << "[≈¨∂Û] NPC ¿Ãµø: " << other_id << std::endl;
         }
 
-
-        //std::cout << "[Client] New Player Information Recv "
-        //    << " Position(" << packet->position.x << "," << packet->position.y << "," << packet->position.z << ")"
-        //    << " Look(" << packet->look.x << "," << packet->look.y << "," << packet->look.z << ")"
-        //    << " Right(" << packet->right.x << "," << packet->right.y << "," << packet->right.z << ")"
-        //    << "Animation : " << static_cast<int>(packet->animState)
-        //    << std::endl;
-
+        
         break;
     }
 
-    case SC_P_LEAVE: // ÏÑúÎ≤ÑÍ∞Ä ÌÅ¥ÎùºÏóêÍ≤å Îã§Î•∏ ÌîåÎ†àÏù¥Ïñ¥Í∞Ä Í≤åÏûÑÏùÑ Îñ†ÎÇ¨ÏùåÏùÑ ÏïåÎ†§Ï£ºÎäî Ìå®ÌÇ∑ ÌÉÄÏûÖ
+    case SC_P_LEAVE: // º≠πˆ∞° ≈¨∂Ûø°∞‘ ¥Ÿ∏• «√∑π¿ÃæÓ∞° ∞‘¿”¿ª ∂∞≥µ¿Ω¿ª æÀ∑¡¡÷¥¬ ∆–≈∂ ≈∏¿‘
     {
         sc_packet_leave* packet = reinterpret_cast<sc_packet_leave*>(ptr);
         int other_id = packet->id;
 
-        std::cout << "[Client] ÌîåÎ†àÏù¥Ïñ¥ Ï†úÍ±∞: ID=" << other_id << std::endl;
+        if (other_id == g_myid) {
+            std::cout << "[≈¨∂Û] ≥ª «√∑π¿ÃæÓ ¡¶∞≈: " << other_id << std::endl;
 
+            //øπΩ√
+            // avatar.hide();
+
+        }
+        else if (other_id < MAX_USER) {
+            std::cout << "[≈¨∂Û] «√∑π¿ÃæÓ ≈¿Â: " << other_id << std::endl;
+
+            //øπΩ√
+            g_other_players.erase(other_id);
+        }
+        else {
+            std::cout << "[≈¨∂Û] NPC ¡¶∞≈: " << other_id << std::endl;
+        }
+
+        
         break;
     }
-
-    case SC_P_ITEM_SPAWN: 
-    {
-        sc_packet_item_spawn* pkt = reinterpret_cast<sc_packet_item_spawn*>(ptr);
-
-        // ÏóêÏãú
-        // gGameFramework.AddItemToScene(pkt->item_id, static_cast<ITEM_TYPE>(pkt->item_type), pkt->position);
-
-        std::cout << "[Client] Item Create - ID: " << pkt->item_id
-            << " Postion(" << pkt->position.x << ", "
-            << pkt->position.y << ", " << pkt->position.z << ")"
-            << " Type: " << pkt->item_type << std::endl;
-
-        break;
-    }
-
-    case SC_P_ITEM_DESPAWN: 
-    {
-        sc_packet_item_despawn* pkt = reinterpret_cast<sc_packet_item_despawn*>(ptr);
-        std::cout << "[Client] Item delete - ID: " << pkt->item_id << std::endl;
-        break;
-    }
-
-    case SC_P_ITEM_MOVE: 
-    {
-        sc_packet_item_move* pkt = reinterpret_cast<sc_packet_item_move*>(ptr);
-
-
-        break;
-    }
-
-    case SC_P_MONSTER_SPAWN:
-    {
-        sc_packet_monster_spawn* pkt = reinterpret_cast<sc_packet_monster_spawn*>(ptr);
-        std::cout << "[Client] Monster Spawn - ID: " << pkt->monsterID
-            << " Position(" << pkt->position.x << ", " << pkt->position.z << ")"
-            << " State: " << static_cast<int>(pkt->state) << std::endl;
-
-        // Î™¨Ïä§ÌÑ∞ ÏÉùÏÑ±
-        // ÏòàÏãú -> gGameFramework.OnMonsterSpawned(pkt->monsterID, pkt->position);
-        break;
-    }
-
-    case SC_P_MONSTER_MOVE:
-    {
-        sc_packet_monster_move* pkt = reinterpret_cast<sc_packet_monster_move*>(ptr);
-
-        std::cout << "[Client] Monster Move - ID: " << pkt->monsterID
-            << " New Position(" << pkt->position.x << ", " << pkt->position.z << ")"
-            << " State: " << static_cast<int>(pkt->state) << std::endl;
-
-        //Î™¨Ïä§ÌÑ∞ ÏúÑÏπò ÏóÖÎç∞Ïù¥Ìä∏ Î°úÏßÅ
-        // ÏòàÏãú ->  gGameFramework.UpdateMonsterPosition(pkt->monsterID, pkt->position, pkt->state);
-        break;
-    }
-    
-
     default:
-        std::cout << "Ïïå Ïàò ÏóÜÎäî Ìå®ÌÇ∑ ÌÉÄÏûÖ [" << ptr[1] << "]" << std::endl;
+        printf("æÀ ºˆ æ¯¥¬ ∆–≈∂ ≈∏¿‘ [%d]\n", ptr[1]);
     }
 }
 
-// process_data() Ìï®Ïàò Í∞úÏÑ†
+// process_data() «‘ºˆ ∞≥º±
 void process_data(char* net_buf, size_t io_byte) {
 
     char* ptr = net_buf;
@@ -336,15 +302,18 @@ void process_data(char* net_buf, size_t io_byte) {
     }
 }
 
-void send_position_to_server(const XMFLOAT3& position, const XMFLOAT3& look, const XMFLOAT3& right, const uint8_t& animState)
+
+void send_position_to_server(const XMFLOAT3& position)
 {
 
     cs_packet_move p;
     p.size = sizeof(p);
     p.type = CS_P_MOVE;
     p.position = position;
-    p.look = look;
-    p.right = right;
-    p.animState = animState;
+
     send_packet(&p);
+
+    // ¿¸º€ »Æ¿Œ √‚∑¬
+    std::cout << "[≈¨∂Û] ≥ª ¿ßƒ° ¿¸º€: (" << position.x << ", " << position.y << ", " << position.z << ")\n";
+
 }
