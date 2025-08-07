@@ -183,7 +183,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 
 	if (pSpiderModel) delete pSpiderModel;
 
-	m_nGameObjects = 3;
+	m_nGameObjects = 6;
 	m_ppGameObjects = new CGameObject * [m_nGameObjects];
 
 	CLoadedModelInfo* pFlashlightModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Item/Flashlightgold.bin", NULL);
@@ -211,6 +211,32 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	m_ppGameObjects[2]->SetFrameName("Whistle");
 	m_ppGameObjects[2]->price = 30;
 	if (pWhistleModel) delete pWhistleModel;
+
+	CLoadedModelInfo* pCanister01Model = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Item/Canisters_01.bin", NULL);
+	m_ppGameObjects[3] = new Canister01(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCanister01Model);
+	m_ppGameObjects[3]->SetScale(1, 1, 1);
+	m_ppGameObjects[3]->SetPosition(3, 2, 10);
+	m_ppGameObjects[3]->SetFrameName("Canister01");
+	m_ppGameObjects[3]->price = 180;
+	if (pCanister01Model) delete pCanister01Model;
+
+	CLoadedModelInfo* pCanister02Model = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Item/Canisters_02.bin", NULL);
+	m_ppGameObjects[4] = new Canister02(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCanister02Model);
+	m_ppGameObjects[4]->SetScale(1, 1, 1);
+	m_ppGameObjects[4]->SetPosition(3, 2, 12);
+	m_ppGameObjects[4]->SetFrameName("Canister02");
+	m_ppGameObjects[4]->price = 280;
+	if (pCanister02Model) delete pCanister02Model;
+
+	CLoadedModelInfo* pCanister03Model = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, "Model/Item/Canisters_03.bin", NULL);
+	m_ppGameObjects[5] = new Canister03(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature, pCanister03Model);
+	m_ppGameObjects[5]->SetScale(1, 1, 1);
+	m_ppGameObjects[5]->SetPosition(3, 2, 13);
+	m_ppGameObjects[5]->SetFrameName("Canister03");
+	m_ppGameObjects[5]->price = 330;
+	if (pCanister03Model) delete pCanister03Model;
+
+
 
 	m_nOtherPlayers = 1;
 	m_ppOtherPlayers = new OtherPlayer * [m_nOtherPlayers];

@@ -6,6 +6,11 @@ void Item::ChangeExistState(bool isExist)
 	is_exist = isExist;
 }
 
+void Item::Animate(float fTimeElapsed)
+{
+
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 
 Shovel::Shovel(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CLoadedModelInfo* pModel)
@@ -91,7 +96,70 @@ Whistle::~Whistle()
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 
-void Item::Animate(float fTimeElapsed)
+Canister01::Canister01(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CLoadedModelInfo* pModel)
 {
+	CLoadedModelInfo* pCanister01Model = pModel;
+	if (!pCanister01Model) pCanister01Model = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Item/Canisters_01.bin", NULL);
 
+	SetChild(pCanister01Model->m_pModelRootObject, true);
+}
+
+Canister01::~Canister01()
+{
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 
+Canister02::Canister02(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CLoadedModelInfo* pModel)
+{
+	CLoadedModelInfo* pCanister02Model = pModel;
+	if (!pCanister02Model) pCanister02Model = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Item/Canisters_02.bin", NULL);
+
+	SetChild(pCanister02Model->m_pModelRootObject, true);
+}
+
+Canister02::~Canister02()
+{
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 
+Canister03::Canister03(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CLoadedModelInfo* pModel)
+{
+	CLoadedModelInfo* pCanister03Model = pModel;
+	if (!pCanister03Model) pCanister03Model = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Item/Canisters_03.bin", NULL);
+
+	SetChild(pCanister03Model->m_pModelRootObject, true);
+}
+
+Canister03::~Canister03()
+{
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 
+Goldbar::Goldbar(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CLoadedModelInfo* pModel)
+{
+	CLoadedModelInfo* pGoldbarModel = pModel;
+	if (!pGoldbarModel) pGoldbarModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Item/Goldbar.bin", NULL);
+
+	SetChild(pGoldbarModel->m_pModelRootObject, true);
+}
+
+Goldbar::~Goldbar()
+{
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// 
+Goldcoin::Goldcoin(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CLoadedModelInfo* pModel)
+{
+	CLoadedModelInfo* pGoldcoinModel = pModel;
+	if (!pGoldcoinModel) pGoldcoinModel = CGameObject::LoadGeometryAndAnimationFromFile(pd3dDevice, pd3dCommandList, pd3dGraphicsRootSignature, "Model/Item/Coin.bin", NULL);
+
+	SetChild(pGoldcoinModel->m_pModelRootObject, true);
+}
+
+Goldcoin::~Goldcoin()
+{
 }

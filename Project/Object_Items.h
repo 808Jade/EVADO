@@ -74,3 +74,39 @@ public:
 	virtual ~Whistle();
 
 };
+
+// Valuable items
+class Canister01 : public Item
+{
+public:
+	Canister01(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CLoadedModelInfo* pModel);
+	virtual ~Canister01();
+};
+
+class Canister02 : public Item
+{
+public:
+	Canister02(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CLoadedModelInfo* pModel);
+	virtual ~Canister02();
+};
+
+class Canister03 : public Item
+{
+public:
+	Canister03(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CLoadedModelInfo* pModel);
+	virtual ~Canister03();
+};
+
+class Goldbar : public Item
+{
+public:
+	Goldbar(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CLoadedModelInfo* pModel);
+	virtual ~Goldbar();
+};
+
+class Goldcoin : public Item
+{
+public:
+	Goldcoin(ID3D12Device* pd3dDevice, ID3D12GraphicsCommandList* pd3dCommandList, ID3D12RootSignature* pd3dGraphicsRootSignature, CLoadedModelInfo* pModel);
+	virtual ~Goldcoin();
+};
