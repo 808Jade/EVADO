@@ -299,7 +299,7 @@ void CScene::BuildObjects(ID3D12Device *pd3dDevice, ID3D12GraphicsCommandList *p
 	CreateShaderResourceViews(pd3dDevice, pTextureItem3, 0, 15);
 	m_textureMap["Whistle"] = pTextureItem3;
 
-	CTextureToScreenShader* pTextureItem1Shader = new CTextureToScreenShader(1);
+	CTextureToScreenShader* pTextureItem1Shader = new CTextureToScreenShader(1);	
 	pTextureItem1Shader->CreateShader(pd3dDevice, pd3dCommandList, m_pd3dGraphicsRootSignature);
 	CScreenRectMeshTextured* pMesh = new CScreenRectMeshTextured(pd3dDevice, pd3dCommandList, 0.02f, 0.225f * 0.5f, -0.65f, 0.4f * 0.5f);
 	pTextureItem1Shader->SetMesh(0, pMesh);
